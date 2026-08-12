@@ -1,0 +1,30 @@
+﻿@model ProfileViewModel
+@{
+    ViewData["Title"] = "Hồ sơ cá nhân";
+}
+
+<div class="page-heading">
+    <h1>Hồ sơ cá nhân</h1>
+    <p>Xem và cập nhật thông tin tài khoản của bạn.</p>
+</div>
+
+<div class="card">
+    <form asp-action="Profile" method="post">
+        <div asp-validation-summary="All" class="text-danger"></div>
+        <input type="hidden" asp-for="UserId" />
+
+        <label><i class="fa-solid fa-user"></i> Họ tên</label>
+        <input asp-for="FullName" placeholder="Nhập họ tên" />
+
+        <label><i class="fa-solid fa-phone"></i> Số điện thoại</label>
+        <input asp-for="Phone" placeholder="Nhập số điện thoại" />
+
+        <label><i class="fa-solid fa-envelope"></i> Email</label>
+        <input asp-for="Email" placeholder="Nhập email" />
+
+        <button class="btn-full" type="submit">
+            <i class="fa-solid fa-check"></i>
+            Lưu thay đổi
+        </button>
+    </form>
+</div>

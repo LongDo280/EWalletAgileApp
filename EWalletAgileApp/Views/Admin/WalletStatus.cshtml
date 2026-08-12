@@ -1,0 +1,63 @@
+﻿@model List<User>
+@{
+    ViewData["Title"] = "Quản lý trạng thái ví";
+}
+
+<div class="card">
+    <h1>Quản lý trạng thái ví</h1>
+    <p class="hint">
+        Trạng thái ví (khóa/mở giao dịch) tách biệt với trạng thái tài khoản (khóa/mở đăng nhập ở mục Quản lý người dùng).
+    </p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Họ tên</th>
+                <th>Số dư</th>
+                <th>Trạng thái ví</th>
+                <th>Ghi chú</th>
+                <th>Cập nhật lần cuối</th>
+                <th>Thao tác</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var user in Model)
+            {
+                <tr>
+                    <td>@user.UserId</td>
+                    <td>@user.FullName</td>
+                    <td>@user.Balance.ToString("N0") đ</td>
+                    <td>
+                        @if (user.WalletStatus == "Active")
+                        {
+                            <span class="badge badge-success">
+                                <i class="fa-solid fa-circle-check"></i>
+                                Đang hoạt động
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="badge badge-danger">
+                                <i class="fa-solid fa-lock"></i>
+                                Đã khóa
+                            </span>
+                        }
+                    </td>
+                    <td>@user.WalletStatusNote</td>
+                    <td>@(user.WalletStatusUpdatedAt?.ToString("dd/MM/yyyy HH:mm") ?? "-")</td>
+                    <td>
+                        <form asp-action="ToggleWalletStatus" method="post">
+                            <input type="hidden" name="id" value="@user.UserId" />
+                            <input type="text" name="note" placeholder="Lý do (tuỳ chọn)" />
+                            <button type="submit" class="btn btn-light">
+                                <i class="fa-solid fa-lock-open"></i>
+                                Khóa/Mở ví
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

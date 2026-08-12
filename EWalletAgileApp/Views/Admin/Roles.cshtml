@@ -1,0 +1,50 @@
+﻿@model List<User>
+@{
+    ViewData["Title"] = "Quản lý vai trò";
+}
+
+<div class="card">
+    <h1>Quản lý vai trò người dùng</h1>
+    <p class="hint">Phân quyền Admin cho phép truy cập toàn bộ khu vực quản trị hệ thống.</p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Họ tên</th>
+                <th>Email</th>
+                <th>Vai trò hiện tại</th>
+                <th>Thao tác</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var user in Model)
+            {
+                <tr>
+                    <td>@user.UserId</td>
+                    <td>@user.FullName</td>
+                    <td>@user.Email</td>
+                    <td>
+                        @if (user.Role == "Admin")
+                        {
+                            <span class="badge badge-success">Admin</span>
+                        }
+                        else
+                        {
+                            <span class="badge badge-danger">User</span>
+                        }
+                    </td>
+                    <td>
+                        <form asp-action="ChangeRole" method="post">
+                            <input type="hidden" name="id" value="@user.UserId" />
+                            <select name="role" onchange="this.form.submit()">
+                                <option value="User" selected="@(user.Role == "User")">User</option>
+                                <option value="Admin" selected="@(user.Role == "Admin")">Admin</option>
+                            </select>
+                        </form>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

@@ -1,0 +1,82 @@
+@{
+    ViewData["Title"] = "Admin Dashboard";
+}
+
+<div class="page-heading">
+    <h1>Dashboard Admin</h1>
+    <p>Tổng quan hoạt động của hệ thống ví điện tử.</p>
+</div>
+
+<div class="dashboard-grid">
+    <div class="stat-card">
+        <div class="stat-card-top">
+            <span>Tổng người dùng</span>
+
+            <div class="stat-icon">
+                <i class="fa-solid fa-users"></i>
+            </div>
+        </div>
+
+        <strong>@ViewBag.UserCount</strong>
+        <small>Tài khoản trong hệ thống</small>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-card-top">
+            <span>Tổng giao dịch</span>
+
+            <div class="stat-icon">
+                <i class="fa-solid fa-arrow-right-arrow-left"></i>
+            </div>
+        </div>
+
+        <strong>@ViewBag.TransactionCount</strong>
+        <small>Giao dịch đã được ghi nhận</small>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-card-top">
+            <span>Tổng số dư ví</span>
+
+            <div class="stat-icon">
+                <i class="fa-solid fa-sack-dollar"></i>
+            </div>
+        </div>
+
+        <strong>@ViewBag.TotalMoney.ToString("N0") đ</strong>
+        <small>Tổng tiền của toàn bộ người dùng</small>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-title">
+        <div>
+            <h2>Quản lý hệ thống</h2>
+            <p>Chọn chức năng quản trị bạn muốn sử dụng.</p>
+        </div>
+    </div>
+
+    <div class="grid-actions">
+        <a class="action-card" asp-action="Users">
+            <span class="action-icon transfer-icon">
+                <i class="fa-solid fa-user-gear"></i>
+            </span>
+
+            <div>
+                <h3>Quản lý người dùng</h3>
+                <p>Xem thông tin, số dư và khóa hoặc mở tài khoản.</p>
+            </div>
+        </a>
+
+        <a class="action-card" asp-action="Transactions">
+            <span class="action-icon bill-icon">
+                <i class="fa-solid fa-list-check"></i>
+            </span>
+
+            <div>
+                <h3>Quản lý giao dịch</h3>
+                <p>Theo dõi toàn bộ giao dịch phát sinh trong hệ thống.</p>
+            </div>
+        </a>
+    </div>
+</div>

@@ -1,0 +1,77 @@
+﻿@model List<BankAccount>
+@{
+    ViewData["Title"] = "Ngân hàng liên kết";
+}
+
+<div class="card">
+    <div class="card-title">
+        <div>
+            <h2>Tài khoản ngân hàng liên kết</h2>
+            <p>Quản lý các tài khoản ngân hàng đã liên kết với ví của bạn.</p>
+        </div>
+
+        <a class="btn btn-light" asp-action="LinkBank">
+            <i class="fa-solid fa-plus"></i>
+            Liên kết ngân hàng mới
+        </a>
+    </div>
+
+    @if (Model.Any())
+    {
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Ngân hàng</th>
+                        <th>Số tài khoản</th>
+                        <th>Chủ tài khoản</th>
+                        <th>Trạng thái</th>
+                        <th>Ngày liên kết</th>
+                        <th>Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>@item.BankName</td>
+                            <td>@item.AccountNumber</td>
+                            <td>@item.AccountHolderName</td>
+                            <td>
+                                @if (item.Status == "Linked")
+                                {
+                                    <span class="badge badge-success">Đang liên kết</span>
+                                }
+                                else
+                                {
+                                    <span class="badge badge-danger">Đã hủy liên kết</span>
+                                }
+                            </td>
+                            <td>@item.LinkedAt.ToString("dd/MM/yyyy HH:mm")</td>
+                            <td>
+                                @if (item.Status == "Linked")
+                                {
+                                    <form asp-action="UnlinkBank" method="post">
+                                        <input type="hidden" name="id" value="@item.BankAccountId" />
+                                        <button type="submit" class="btn btn-light">
+                                            <i class="fa-solid fa-link-slash"></i>
+                                            Hủy liên kết
+                                        </button>
+                                    </form>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <div class="empty-state">
+            <i class="fa-solid fa-building-columns"></i>
+            <h3>Chưa liên kết ngân hàng nào</h3>
+            <p>Liên kết tài khoản ngân hàng để nạp/rút tiền dễ dàng hơn.</p>
+        </div>
+    }
+</div>

@@ -1,0 +1,164 @@
+@model User
+@if (Model.Status == "Active")
+{
+    <span class="badge badge-success">
+        <i class="fa-solid fa-circle-check"></i>
+        Ví đang hoạt động
+    </span>
+}
+else
+{
+    <span class="badge badge-danger">
+        <i class="fa-solid fa-lock"></i>
+        Ví đang bị khóa
+    </span>
+}
+@{
+    ViewData["Title"] = "Trang chủ ví";
+    var transactions = ViewBag.Transactions as List<Transaction>;
+}
+
+<section class="wallet-header">
+    <div class="wallet-user">
+        <span class="wallet-label">
+            <i class="fa-solid fa-shield-halved"></i>
+            Ví đã được xác thực
+        </span>
+
+        <p>Xin chào,</p>
+        <h1>@Model.FullName</h1>
+
+        <span class="wallet-id">
+            <i class="fa-solid fa-phone"></i>
+            @Model.Phone
+        </span>
+    </div>
+
+    <div class="balance-box">
+        <span>Số dư khả dụng</span>
+        <strong>@Model.Balance.ToString("N0") đ</strong>
+        <small>
+            <i class="fa-solid fa-lock"></i>
+            Số dư được bảo mật
+        </small>
+    </div>
+</section>
+
+<div class="page-heading">
+    <h1>Tiện ích ví</h1>
+    <p>Thực hiện các giao dịch nhanh chóng và an toàn.</p>
+</div>
+
+<div class="grid-actions">
+    <a class="action-card" asp-action="Deposit">
+        <span class="action-icon deposit-icon">
+            <i class="fa-solid fa-circle-plus"></i>
+        </span>
+
+        <div>
+            <h3>Nạp tiền</h3>
+            <p>Nạp tiền vào ví để sử dụng các dịch vụ.</p>
+        </div>
+    </a>
+
+    <a class="action-card" asp-action="Withdraw">
+        <span class="action-icon withdraw-icon">
+            <i class="fa-solid fa-money-bill-transfer"></i>
+        </span>
+
+        <div>
+            <h3>Rút tiền</h3>
+            <p>Rút tiền từ ví về tài khoản của bạn.</p>
+        </div>
+    </a>
+
+    <a class="action-card" asp-action="Transfer">
+        <span class="action-icon transfer-icon">
+            <i class="fa-solid fa-paper-plane"></i>
+        </span>
+
+        <div>
+            <h3>Chuyển tiền</h3>
+            <p>Chuyển tiền nhanh qua số điện thoại.</p>
+        </div>
+    </a>
+
+    <a class="action-card" asp-action="PayBill">
+        <span class="action-icon bill-icon">
+            <i class="fa-solid fa-file-invoice-dollar"></i>
+        </span>
+
+        <div>
+            <h3>Thanh toán hóa đơn</h3>
+            <p>Thanh toán điện, nước và Internet.</p>
+        </div>
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-title">
+        <div>
+            <h2>Giao dịch gần đây</h2>
+            <p>Theo dõi các hoạt động mới nhất trong ví.</p>
+        </div>
+
+        <a class="btn btn-light" asp-action="History">
+            Xem tất cả
+            <i class="fa-solid fa-arrow-right"></i>
+        </a>
+    </div>
+
+    @if (transactions != null && transactions.Any())
+    {
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Loại giao dịch</th>
+                        <th>Số tiền</th>
+                        <th>Nội dung</th>
+                        <th>Trạng thái</th>
+                        <th>Thời gian</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @foreach (var item in transactions)
+                    {
+                        var isIncome =
+                            item.Type == "Nạp tiền" ||
+                            item.ReceiverId == Model.UserId;
+
+                        <tr>
+                            <td>
+                                <strong>@item.Type</strong>
+                            </td>
+
+                            <td class="@(isIncome ? "amount-positive" : "amount-negative")">
+                                @(isIncome ? "+" : "-")@item.Amount.ToString("N0") đ
+                            </td>
+
+                            <td>@item.Description</td>
+
+                            <td>
+                                <span class="badge badge-success">
+                                    @item.Status
+                                </span>
+                            </td>
+
+                            <td>@item.CreatedAt.ToString("dd/MM/yyyy HH:mm")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <div class="empty-state">
+            <i class="fa-solid fa-receipt"></i>
+            <h3>Chưa có giao dịch</h3>
+            <p>Các giao dịch mới sẽ được hiển thị tại đây.</p>
+        </div>
+    }
+</div>

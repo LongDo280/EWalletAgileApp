@@ -1,0 +1,22 @@
+@model User
+@{
+    ViewData["Title"] = "Đăng ký";
+}
+<div class="card auth-card">
+    <h1>Đăng ký tài khoản</h1>
+    <form asp-action="Register" method="post">
+        <div asp-validation-summary="All" class="text-danger"></div>
+        <label>Họ tên</label>
+        <input asp-for="FullName" />
+        <label>Số điện thoại</label>
+        <input asp-for="Phone" />
+        <label>Email</label>
+        <input asp-for="Email" />
+        <label>Mật khẩu</label>
+        <input asp-for="Password" type="password" />
+        <label>Mã PIN</label>
+        <input asp-for="PinCode" type="password" />
+        <button type="submit">Tạo tài khoản</button>
+    </form>
+    <p>Đã có tài khoản? <a asp-action="Login">Đăng nhập</a></p>
+</div>

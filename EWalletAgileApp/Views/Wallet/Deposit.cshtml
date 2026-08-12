@@ -1,0 +1,100 @@
+@{
+    ViewData["Title"] = "Nạp tiền";
+
+    var bankAccounts =
+        ViewBag.BankAccounts as List<BankAccount>
+        ?? new List<BankAccount>();
+}
+
+<div class="card form-card">
+
+    <div class="form-icon">
+        <i class="fa-solid fa-circle-plus"></i>
+    </div>
+
+    <h1>Nạp tiền vào ví</h1>
+
+    <p class="form-description">
+        Chọn tài khoản ngân hàng và nhập số tiền muốn nạp.
+    </p>
+
+    <form asp-action="Deposit" method="post">
+
+        @Html.AntiForgeryToken()
+
+        <div asp-validation-summary="All" class="text-danger"></div>
+
+        @if (!bankAccounts.Any())
+        {
+            <div class="empty-state">
+
+                <i class="fa-solid fa-building-columns"></i>
+
+                <h3>Chưa có tài khoản ngân hàng</h3>
+
+                <p>
+                    Bạn cần liên kết ít nhất một tài khoản ngân hàng
+                    trước khi nạp tiền.
+                </p>
+
+                <a asp-action="LinkBank" class="btn btn-light">
+                    <i class="fa-solid fa-link"></i>
+                    Liên kết ngân hàng
+                </a>
+
+            </div>
+        }
+        else
+        {
+            <label>
+                <i class="fa-solid fa-building-columns"></i>
+                Tài khoản ngân hàng
+            </label>
+
+            <select name="bankAccountId" required>
+
+                <option value="">
+                    -- Chọn tài khoản ngân hàng --
+                </option>
+
+                @foreach (var bank in bankAccounts)
+                {
+                    var lastFour =
+                        bank.AccountNumber.Length >= 4
+                            ? bank.AccountNumber[^4..]
+                            : bank.AccountNumber;
+
+                    <option value="@bank.BankAccountId">
+                        @bank.BankName - ****@lastFour
+                    </option>
+                }
+
+            </select>
+
+            <label>
+                <i class="fa-solid fa-money-bill"></i>
+                Số tiền cần nạp
+            </label>
+
+            <input name="amount"
+                   type="number"
+                   min="1000"
+                   step="1000"
+                   placeholder="Ví dụ: 100000"
+                   required />
+
+            <p class="hint">
+                Hạn mức mỗi giao dịch:
+                <strong>@User.FindFirst("TransactionLimit")?.Value</strong>
+            </p>
+
+            <button class="btn-full" type="submit">
+
+                <i class="fa-solid fa-circle-check"></i>
+
+                Xác nhận nạp tiền
+
+            </button>
+        }
+    </form>
+</div>

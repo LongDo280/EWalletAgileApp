@@ -1,0 +1,51 @@
+﻿@model User
+@{
+    ViewData["Title"] = "Hạn mức ví";
+    var usedToday = (decimal)ViewBag.UsedToday;
+}
+
+<div class="page-heading">
+    <h1>Hạn mức ví</h1>
+    <p>Các giới hạn giao dịch đang áp dụng cho ví của bạn.</p>
+</div>
+
+<div class="dashboard-grid">
+    <div class="stat-card">
+        <div class="stat-card-top">
+            <span>Hạn mức mỗi giao dịch</span>
+            <div class="stat-icon">
+                <i class="fa-solid fa-money-bill-transfer"></i>
+            </div>
+        </div>
+        <strong>@Model.TransactionLimit.ToString("N0") đ</strong>
+        <small>Số tiền tối đa cho một giao dịch</small>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-card-top">
+            <span>Hạn mức mỗi ngày</span>
+            <div class="stat-icon">
+                <i class="fa-solid fa-calendar-day"></i>
+            </div>
+        </div>
+        <strong>@Model.DailyLimit.ToString("N0") đ</strong>
+        <small>Đã dùng hôm nay: @usedToday.ToString("N0") đ</small>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-card-top">
+            <span>Số dư tối đa</span>
+            <div class="stat-icon">
+                <i class="fa-solid fa-sack-dollar"></i>
+            </div>
+        </div>
+        <strong>@Model.MaximumBalance.ToString("N0") đ</strong>
+        <small>Số dư hiện tại: @Model.Balance.ToString("N0") đ</small>
+    </div>
+</div>
+
+<div class="card">
+    <p class="hint">
+        Hạn mức ví được cấu hình bởi quản trị viên hệ thống. Vui lòng liên hệ hỗ trợ nếu bạn cần điều chỉnh.
+    </p>
+</div>

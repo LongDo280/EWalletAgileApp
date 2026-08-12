@@ -1,0 +1,27 @@
+﻿@model WalletLimitViewModel
+@{
+    ViewData["Title"] = "Chỉnh sửa hạn mức ví";
+}
+
+<div class="card form-card">
+    <h1>Hạn mức ví - @Model.FullName</h1>
+
+    <form asp-action="EditLimits" method="post">
+        <div asp-validation-summary="All" class="text-danger"></div>
+        <input type="hidden" asp-for="UserId" />
+
+        <label>Hạn mức mỗi giao dịch (đ)</label>
+        <input asp-for="TransactionLimit" type="number" min="1000" />
+
+        <label>Hạn mức giao dịch mỗi ngày (đ)</label>
+        <input asp-for="DailyLimit" type="number" min="1000" />
+
+        <label>Số dư tối đa (đ)</label>
+        <input asp-for="MaximumBalance" type="number" min="1000" />
+
+        <button class="btn-full" type="submit">
+            <i class="fa-solid fa-floppy-disk"></i>
+            Lưu hạn mức
+        </button>
+    </form>
+</div>

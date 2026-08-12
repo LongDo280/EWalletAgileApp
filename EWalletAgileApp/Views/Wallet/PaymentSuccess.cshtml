@@ -1,0 +1,260 @@
+﻿@model EWalletAgileApp.Models.TransactionResultViewModel
+
+@{
+    ViewData["Title"] = "Giao dịch thành công";
+
+    var transaction = Model.Transaction;
+    var bill = Model.Bill;
+}
+
+<div class="payment-success-page">
+
+    <div class="payment-success-card">
+
+        <!-- SUCCESS ICON -->
+        <div class="payment-success-icon">
+            <i class="fa-solid fa-check"></i>
+        </div>
+
+        <!-- TITLE -->
+        <h1 class="payment-success-title">
+            Giao dịch thành công
+        </h1>
+
+        <p class="payment-success-subtitle">
+            Giao dịch của bạn đã được thực hiện thành công.
+        </p>
+
+
+        <!-- AMOUNT -->
+        <div class="payment-success-amount">
+
+            <div class="amount-value">
+                -@transaction.Amount.ToString("N0") đ
+            </div>
+
+            <div class="amount-type">
+                <i class="fa-solid fa-file-invoice"></i>
+
+                Thanh toán hóa đơn
+            </div>
+
+        </div>
+
+
+        <!-- TRANSACTION DETAILS -->
+        <div class="payment-details">
+
+            <!-- Loại giao dịch -->
+            <div class="payment-detail-row">
+
+                <div class="payment-detail-label">
+                    <i class="fa-solid fa-wallet"></i>
+                    <span>Loại giao dịch</span>
+                </div>
+
+                <strong>
+                    Thanh toán hóa đơn
+                </strong>
+
+            </div>
+
+
+            @if (bill != null)
+            {
+                <!-- Loại hóa đơn -->
+                <div class="payment-detail-row">
+
+                    <div class="payment-detail-label">
+                        <i class="fa-solid fa-file-invoice"></i>
+                        <span>Loại hóa đơn</span>
+                    </div>
+
+                    <strong>
+                        @bill.BillType
+                    </strong>
+
+                </div>
+
+
+                <!-- Mã khách hàng -->
+                <div class="payment-detail-row">
+
+                    <div class="payment-detail-label">
+                        <i class="fa-solid fa-id-card"></i>
+                        <span>Mã khách hàng</span>
+                    </div>
+
+                    <strong>
+                        @bill.CustomerCode
+                    </strong>
+
+                </div>
+
+
+                <!-- Khách hàng -->
+                <div class="payment-detail-row">
+
+                    <div class="payment-detail-label">
+                        <i class="fa-solid fa-user"></i>
+                        <span>Khách hàng</span>
+                    </div>
+
+                    <strong>
+                        @bill.CustomerName
+                    </strong>
+
+                </div>
+
+
+                <!-- Kỳ thanh toán -->
+                <div class="payment-detail-row">
+
+                    <div class="payment-detail-label">
+                        <i class="fa-regular fa-calendar"></i>
+                        <span>Kỳ thanh toán</span>
+                    </div>
+
+                    <strong>
+                        @bill.BillingPeriod
+                    </strong>
+
+                </div>
+            }
+
+
+            <!-- Mã giao dịch -->
+            <div class="payment-detail-row">
+
+                <div class="payment-detail-label">
+                    <i class="fa-solid fa-tag"></i>
+                    <span>Mã giao dịch</span>
+                </div>
+
+                <div class="transaction-code-wrapper">
+
+                    <strong class="transaction-code">
+                        @transaction.TransactionCode
+                    </strong>
+
+                    <button type="button"
+                            class="copy-code-btn"
+                            onclick="copyTransactionCode('@transaction.TransactionCode')"
+                            title="Sao chép mã giao dịch">
+
+                        <i class="fa-regular fa-copy"></i>
+
+                    </button>
+
+                </div>
+
+            </div>
+
+
+            <!-- Thời gian -->
+            <div class="payment-detail-row">
+
+                <div class="payment-detail-label">
+                    <i class="fa-regular fa-clock"></i>
+                    <span>Thời gian</span>
+                </div>
+
+                <strong>
+                    @transaction.CreatedAt.ToString("dd/MM/yyyy HH:mm:ss")
+                </strong>
+
+            </div>
+
+
+            <!-- Trạng thái -->
+            <div class="payment-detail-row">
+
+                <div class="payment-detail-label">
+                    <i class="fa-solid fa-shield-check"></i>
+                    <span>Trạng thái</span>
+                </div>
+
+                <span class="payment-status">
+                    <i class="fa-solid fa-check"></i>
+                    Thành công
+                </span>
+
+            </div>
+
+        </div>
+
+
+        <!-- ACTION BUTTONS -->
+        <div class="payment-success-actions">
+
+            <a asp-action="Index"
+               class="payment-btn payment-btn-primary">
+
+                <i class="fa-solid fa-house"></i>
+
+                <span>Về trang chủ</span>
+
+            </a>
+
+
+            <a asp-action="History"
+               class="payment-btn payment-btn-outline">
+
+                <i class="fa-solid fa-clock-rotate-left"></i>
+
+                <span>Xem lịch sử giao dịch</span>
+
+            </a>
+
+        </div>
+
+
+        <!-- SECURITY MESSAGE -->
+        <div class="payment-security">
+
+            <i class="fa-solid fa-lock"></i>
+
+            <span>
+                Giao dịch được bảo mật tuyệt đối
+            </span>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<script>
+
+    function copyTransactionCode(code) {
+
+        navigator.clipboard.writeText(code)
+            .then(function () {
+
+                const button =
+                    document.querySelector(".copy-code-btn");
+
+                const icon =
+                    button.querySelector("i");
+
+                icon.className =
+                    "fa-solid fa-check";
+
+                setTimeout(function () {
+
+                    icon.className =
+                        "fa-regular fa-copy";
+
+                }, 1500);
+
+            })
+            .catch(function () {
+
+                alert("Không thể sao chép mã giao dịch.");
+
+            });
+
+    }
+
+</script>

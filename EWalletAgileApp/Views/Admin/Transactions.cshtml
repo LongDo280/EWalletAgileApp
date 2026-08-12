@@ -1,0 +1,26 @@
+@model List<Transaction>
+@{
+    ViewData["Title"] = "Quản lý giao dịch";
+}
+<div class="card">
+    <h1>Quản lý giao dịch</h1>
+    <table>
+        <thead>
+        <tr><th>ID</th><th>Loại</th><th>Người gửi</th><th>Người nhận</th><th>Số tiền</th><th>Nội dung</th><th>Ngày</th></tr>
+        </thead>
+        <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>@item.TransactionId</td>
+                <td>@item.Type</td>
+                <td>@item.Sender?.FullName</td>
+                <td>@item.Receiver?.FullName</td>
+                <td>@item.Amount.ToString("N0") đ</td>
+                <td>@item.Description</td>
+                <td>@item.CreatedAt.ToString("dd/MM/yyyy HH:mm")</td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>

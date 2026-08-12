@@ -1,0 +1,195 @@
+@model EWalletAgileApp.Models.PayBillViewModel
+
+@{
+    ViewData["Title"] = "Thanh toán hóa đơn";
+}
+
+<div class="card form-card">
+
+    <div class="form-icon">
+        <i class="fa-solid fa-file-invoice-dollar"></i>
+    </div>
+
+    <h1>Thanh toán hóa đơn</h1>
+
+    <p class="form-description">
+        Tra cứu hóa đơn trước khi thực hiện thanh toán.
+    </p>
+
+    <div asp-validation-summary="All"
+         class="text-danger mb-3">
+    </div>
+
+    @if (Model == null || Model.BillId == null)
+    {
+        <!-- BƯỚC 1: TRA CỨU -->
+
+        <form asp-action="LookupBill"
+              method="post">
+
+            @Html.AntiForgeryToken()
+
+            <label>
+                <i class="fa-solid fa-list"></i>
+                Loại hóa đơn
+            </label>
+
+            <select asp-for="BillType" required>
+
+                <option value="">
+                    -- Chọn loại hóa đơn --
+                </option>
+
+                <option value="Điện">
+                    💡 Tiền điện
+                </option>
+
+                <option value="Nước">
+                    💧 Tiền nước
+                </option>
+
+                <option value="Internet">
+                    🌐 Internet
+                </option>
+
+                <option value="Điện thoại">
+                    📱 Điện thoại
+                </option>
+
+            </select>
+
+            <span asp-validation-for="BillType"
+                  class="text-danger">
+            </span>
+
+            <label>
+                <i class="fa-solid fa-barcode"></i>
+                Mã khách hàng
+            </label>
+
+            <input asp-for="CustomerCode"
+                   placeholder="Ví dụ: EVN123456"
+                   autocomplete="off"
+                   required />
+
+            <span asp-validation-for="CustomerCode"
+                  class="text-danger">
+            </span>
+
+            <button class="btn-full"
+                    type="submit">
+
+                <i class="fa-solid fa-magnifying-glass"></i>
+
+                Tra cứu hóa đơn
+
+            </button>
+
+        </form>
+    }
+    else
+    {
+        <!-- BƯỚC 2: XÁC NHẬN -->
+
+        <div class="bill-result">
+
+            <div class="bill-header">
+
+                <div>
+                    <span>Loại hóa đơn</span>
+
+                    <strong>
+                        @Model.BillType
+                    </strong>
+                </div>
+
+                <i class="fa-solid fa-file-invoice-dollar"></i>
+
+            </div>
+
+            <div class="bill-info">
+
+                <div class="bill-row">
+                    <span>Mã khách hàng</span>
+
+                    <strong>
+                        @Model.CustomerCode
+                    </strong>
+                </div>
+
+                <div class="bill-row">
+                    <span>Khách hàng</span>
+
+                    <strong>
+                        @Model.CustomerName
+                    </strong>
+                </div>
+
+                <div class="bill-row">
+                    <span>Kỳ thanh toán</span>
+
+                    <strong>
+                        @Model.BillingPeriod
+                    </strong>
+                </div>
+
+                <div class="bill-row total">
+
+                    <span>Số tiền cần thanh toán</span>
+
+                    <strong>
+                        @Model.Amount.ToString("N0") đ
+                    </strong>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <form asp-action="ConfirmPayBill"
+              method="post">
+
+            @Html.AntiForgeryToken()
+
+            <input type="hidden"
+                   asp-for="BillId" />
+
+            <label>
+                <i class="fa-solid fa-lock"></i>
+                Mã PIN
+            </label>
+
+            <input asp-for="PinCode"
+                   type="password"
+                   maxlength="6"
+                   placeholder="Nhập mã PIN"
+                   required />
+
+            <span asp-validation-for="PinCode"
+                  class="text-danger">
+            </span>
+
+            <button class="btn-full"
+                    type="submit">
+
+                <i class="fa-solid fa-circle-check"></i>
+
+                Xác nhận thanh toán
+                @Model.Amount.ToString("N0") đ
+
+            </button>
+
+        </form>
+
+        <a asp-action="PayBill"
+           class="btn btn-light mt-3">
+
+            <i class="fa-solid fa-arrow-left"></i>
+
+            Tra cứu hóa đơn khác
+
+        </a>
+    }
+
+</div>

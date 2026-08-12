@@ -1,0 +1,48 @@
+@model List<User>
+@{
+    ViewData["Title"] = "Quản lý người dùng";
+}
+<div class="card">
+    <h1>Quản lý người dùng</h1>
+    <table>
+        <thead>
+        <tr><th>ID</th><th>Họ tên</th><th>SĐT</th><th>Email</th><th>Số dư</th><th>Trạng thái</th><th>Thao tác</th></tr>
+        </thead>
+        <tbody>
+        @foreach (var user in Model)
+        {
+            <tr>
+                <td>@user.UserId</td>
+                <td>@user.FullName</td>
+                <td>@user.Phone</td>
+                <td>@user.Email</td>
+                <td>@user.Balance.ToString("N0") đ</td>
+                    <td>
+                        @if (user.Status == "Hoạt động" || user.Status == "Active")
+                        {
+                            <span class="badge badge-success">
+                                <i class="fa-solid fa-circle-check"></i>
+                                @user.Status
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="badge badge-danger">
+                                <i class="fa-solid fa-circle-xmark"></i>
+                                @user.Status
+                            </span>
+                        }
+                    </td>
+                    <td>
+                        <a class="btn btn-light"
+                           asp-action="ToggleStatus"
+                           asp-route-id="@user.UserId">
+                            <i class="fa-solid fa-lock-open"></i>
+                            Khóa/Mở
+                        </a>
+                    </td>
+                </tr>
+        }
+        </tbody>
+    </table>
+</div>

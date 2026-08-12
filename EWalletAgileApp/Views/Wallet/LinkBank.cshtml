@@ -1,0 +1,42 @@
+﻿@model BankAccountViewModel
+@{
+    ViewData["Title"] = "Liên kết ngân hàng";
+}
+
+<div class="card form-card">
+    <div class="form-icon">
+        <i class="fa-solid fa-building-columns"></i>
+    </div>
+
+    <h1>Liên kết tài khoản ngân hàng</h1>
+
+    <form asp-action="LinkBank" method="post">
+        <div asp-validation-summary="All" class="text-danger"></div>
+
+        <label>Ngân hàng</label>
+        <select asp-for="BankName">
+            <option value="">-- Chọn ngân hàng --</option>
+            <option value="Vietcombank">Vietcombank</option>
+            <option value="Techcombank">Techcombank</option>
+            <option value="BIDV">BIDV</option>
+            <option value="VietinBank">VietinBank</option>
+            <option value="ACB">ACB</option>
+            <option value="MBBank">MB Bank</option>
+            <option value="Sacombank">Sacombank</option>
+        </select>
+
+        <label>Số tài khoản</label>
+        <input asp-for="AccountNumber" placeholder="Nhập số tài khoản ngân hàng" />
+
+        <label>Tên chủ tài khoản</label>
+        <input asp-for="AccountHolderName" placeholder="Tên đầy đủ trên tài khoản ngân hàng" />
+
+        <label>Mã PIN</label>
+        <input asp-for="PinCode" type="password" placeholder="Nhập mã PIN để xác nhận" />
+
+        <button class="btn-full" type="submit">
+            <i class="fa-solid fa-circle-check"></i>
+            Xác nhận liên kết
+        </button>
+    </form>
+</div>

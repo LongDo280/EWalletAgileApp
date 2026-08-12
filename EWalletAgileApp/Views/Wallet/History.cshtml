@@ -1,0 +1,61 @@
+@model List<Transaction>
+@{
+    ViewData["Title"] = "Lịch sử giao dịch";
+}
+<div class="card">
+    <h1>Lịch sử giao dịch</h1>
+    <table>
+        <thead>
+        <tr>
+            <th>Mã GD</th>
+            <th>Loại</th>
+            <th>Người gửi</th>
+            <th>Người nhận</th>
+            <th>Số tiền</th>
+            <th>Nội dung</th>
+            <th>Trạng thái</th>
+            <th>Ngày</th>
+        </tr>
+        </thead>
+        <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                    <td>
+                        <span class="transaction-code">
+                            @item.TransactionCode
+                        </span>
+                    </td>
+                    <td>
+                        @if (item.Type == "Deposit")
+                        {
+                            <span>Nạp tiền</span>
+                        }
+                        else if (item.Type == "Withdraw")
+                        {
+                            <span>Rút tiền</span>
+                        }
+                        else if (item.Type == "Transfer")
+                        {
+                            <span>Chuyển tiền</span>
+                        }
+                        else if (item.Type == "Bill")
+                        {
+                            <span>Thanh toán hóa đơn</span>
+                        }
+                        else
+                        {
+                            @item.Type
+                        }
+                    </td>
+                <td>@item.Sender?.FullName</td>
+                <td>@item.Receiver?.FullName</td>
+                <td>@item.Amount.ToString("N0") đ</td>
+                <td>@item.Description</td>
+                <td>@item.Status</td>
+                <td>@item.CreatedAt.ToString("dd/MM/yyyy HH:mm")</td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>
