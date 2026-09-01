@@ -1,0 +1,68 @@
+﻿@model List<Fee>
+@{
+    ViewData["Title"] = "Quản lý phí nạp/rút";
+}
+
+<div class="page-heading">
+    <h1>Quản lý phí nạp/rút</h1>
+    <p>Cấu hình biểu phí áp dụng cho giao dịch nạp tiền và rút tiền của toàn hệ thống.</p>
+</div>
+
+<div class="card">
+    <table>
+        <thead>
+            <tr>
+                <th>Loại giao dịch</th>
+                <th>Kiểu phí</th>
+                <th>Giá trị</th>
+                <th>Phí tối đa (chỉ áp dụng cho %)</th>
+                <th>Đang áp dụng</th>
+                <th>Cập nhật lần cuối</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var fee in Model)
+            {
+                var typeLabel = fee.TransactionType == "Deposit" ? "Nạp tiền" : "Rút tiền";
+
+                <tr>
+                    <td><strong>@typeLabel</strong></td>
+                    <td colspan="4">
+                        <form asp-action="UpdateFee" method="post"
+                              style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+
+                            @Html.AntiForgeryToken()
+
+                            <input type="hidden" name="feeId" value="@fee.FeeId" />
+
+                            <select name="feeType" style="width:auto; margin-bottom:0;">
+                                <option value="Percent" selected="@(fee.FeeType == "Percent")">Theo % số tiền</option>
+                                <option value="Fixed" selected="@(fee.FeeType == "Fixed")">Số tiền cố định (đ)</option>
+                            </select>
+
+                            <input type="number" name="value" step="0.1" min="0"
+                                   value="@fee.Value" style="width:110px; margin-bottom:0;" />
+
+                            <input type="number" name="maxFee" step="1000" min="0"
+                                   value="@fee.MaxFee" style="width:130px; margin-bottom:0;"
+                                   title="Phí tối đa, 0 = không giới hạn (chỉ áp dụng khi tính theo %)" />
+
+                            <label style="display:flex; align-items:center; gap:6px; margin:0; font-weight:400;">
+                                <input type="checkbox" name="isActive" value="true"
+                                       style="width:auto; margin:0;"
+                                       checked="@fee.IsActive" />
+                                Áp dụng
+                            </label>
+
+                            <button class="btn" type="submit">
+                                <i class="fa-solid fa-floppy-disk"></i>
+                                Lưu
+                            </button>
+                        </form>
+                    </td>
+                    <td>@fee.UpdatedAt.ToString("dd/MM/yyyy HH:mm")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

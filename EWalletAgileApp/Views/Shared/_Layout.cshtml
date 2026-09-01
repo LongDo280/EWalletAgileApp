@@ -53,11 +53,16 @@
                     Hồ sơ
                 </a>
 
-                @if (Context.Session.GetString("Role") == "Admin")
+                @if (Context.Session.GetString("Role") == "Admin" || Context.Session.GetString("Role") == "Staff") 
                 {
                     <a asp-controller="Admin" asp-action="Index">
                         <i class="fa-solid fa-user-shield"></i>
                         Admin
+                    </a>
+                    <a asp-controller="Reconciliation"
+                       asp-action="Index"
+                       class="nav-link">
+                        Đối soát giao dịch
                     </a>
                 }
 

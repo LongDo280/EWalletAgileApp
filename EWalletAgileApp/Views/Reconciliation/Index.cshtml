@@ -1,0 +1,151 @@
+﻿@model List<EWalletAgileApp.Models.Transaction>
+
+@{
+    ViewData["Title"] = "Đối soát giao dịch";
+}
+
+<div class="container mt-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2>Đối soát giao dịch</h2>
+            <p class="text-muted">
+                Danh sách các giao dịch nạp/rút bị lỗi cần hoàn tiền.
+            </p>
+        </div>
+    </div>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success">
+            @TempData["Success"]
+        </div>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger">
+            @TempData["Error"]
+        </div>
+    }
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+
+            @if (!Model.Any())
+            {
+                <div class="alert alert-info mb-0">
+                    Hiện không có giao dịch lỗi cần hoàn tiền.
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+
+                    <table class="table table-hover align-middle">
+
+                        <thead>
+                            <tr>
+                                <th>Mã giao dịch</th>
+                                <th>Người dùng</th>
+                                <th>Loại</th>
+                                <th>Số tiền</th>
+                                <th>Nội dung</th>
+                                <th>Trạng thái</th>
+                                <th>Thời gian</th>
+                                <th>Thao tác</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+
+                            @foreach (var item in Model)
+                            {
+                                var user =
+                                    item.Type == "Deposit"
+                                        ? item.Receiver
+                                        : item.Sender;
+
+                                <tr>
+
+                                    <td>
+                                        <strong>
+                                            @item.TransactionCode
+                                        </strong>
+                                    </td>
+
+                                    <td>
+                                        @user?.FullName
+                                    </td>
+
+                                    <td>
+                                        @if (item.Type == "Deposit")
+                                        {
+                                            <span class="badge bg-primary">
+                                                Nạp tiền
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-warning text-dark">
+                                                Rút tiền
+                                            </span>
+                                        }
+                                    </td>
+
+                                    <td>
+                                        <strong>
+                                            @item.Amount.ToString("N0") đ
+                                        </strong>
+                                    </td>
+
+                                    <td>
+                                        @item.Description
+                                    </td>
+
+                                    <td>
+                                        <span class="badge bg-danger">
+                                            @item.Status
+                                        </span>
+                                    </td>
+
+                                    <td>
+                                        @item.CreatedAt.ToString(
+                                            "dd/MM/yyyy HH:mm")
+                                    </td>
+
+                                    <td>
+
+                                        <form asp-action="Refund"
+                                              method="post"
+                                              onsubmit="return confirm('Bạn có chắc muốn hoàn tiền cho giao dịch này?');">
+
+                                            @Html.AntiForgeryToken()
+
+                                            <input type="hidden"
+                                                   name="transactionId"
+                                                   value="@item.TransactionId" />
+
+                                            <button type="submit"
+                                                    class="btn btn-success btn-sm">
+                                                Hoàn tiền
+                                            </button>
+
+                                        </form>
+
+                                    </td>
+
+                                </tr>
+                            }
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+            }
+
+        </div>
+    </div>
+
+</div>

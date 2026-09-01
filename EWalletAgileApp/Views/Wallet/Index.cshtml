@@ -94,7 +94,60 @@ else
         </div>
     </a>
 </div>
+<div class="card">
+    <div class="card-title">
+        <div>
+            <h2>Chi tiêu hàng tháng</h2>
+            <p>Tổng tiền rút/chuyển/thanh toán hóa đơn trong 6 tháng gần nhất.</p>
+        </div>
+    </div>
 
+    <canvas id="spendingChart" height="90"></canvas>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<script>
+    (function () {
+        var ctx = document.getElementById('spendingChart').getContext('2d');
+
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: @Json.Serialize(ViewBag.SpendingChartLabels),
+                datasets: [{
+                    label: 'Chi tiêu (đ)',
+                    data: @Json.Serialize(ViewBag.SpendingChartValues),
+                    backgroundColor: '#0f9d76',
+                    borderRadius: 6,
+                    maxBarThickness: 56
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function (context) {
+                                return context.parsed.y.toLocaleString('vi-VN') + ' đ';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function (value) {
+                                return value.toLocaleString('vi-VN') + 'đ';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    })();
+</script>
 <div class="card">
     <div class="card-title">
         <div>

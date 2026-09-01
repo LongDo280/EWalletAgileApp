@@ -169,4 +169,63 @@ public class AdminController : Controller
 
         return RedirectToAction("WalletStatus");
     }
+    // =====================================================
+    // US016 - QUẢN LÝ PHÍ NẠP/RÚT
+    // =====================================================
+
+    public async Task<IActionResult> Fees()
+    {
+        var redirect = EnsureAdmin();
+        if (redirect != null) return redirect;
+
+        var fees = await _context.Fees
+            .OrderBy(f => f.TransactionType)
+            .ToListAsync();
+
+        return View(fees);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> UpdateFee(
+        int feeId,
+        string feeType,
+        decimal value,
+        decimal maxFee,
+        bool isActive)
+    {
+        var redirect = EnsureAdmin();
+        if (redirect != null) return redirect;
+
+        var fee = await _context.Fees.FindAsync(feeId);
+
+        if (fee == null)
+        {
+            TempData["Success"] = "Không tìm thấy biểu phí.";
+            return RedirectToAction("Fees");
+        }
+
+        if (feeType != "Percent" && feeType != "Fixed")
+        {
+            TempData["Success"] = "Loại phí không hợp lệ.";
+            return RedirectToAction("Fees");
+        }
+
+        if (value < 0 || maxFee < 0)
+        {
+            TempData["Success"] = "Giá trị phí không được âm.";
+            return RedirectToAction("Fees");
+        }
+
+        fee.FeeType = feeType;
+        fee.Value = value;
+        fee.MaxFee = maxFee;
+        fee.IsActive = isActive;
+        fee.UpdatedAt = DateTime.Now;
+
+        await _context.SaveChangesAsync();
+
+        TempData["Success"] = $"Đã cập nhật biểu phí {fee.TransactionType}.";
+        return RedirectToAction("Fees");
+    }
 }

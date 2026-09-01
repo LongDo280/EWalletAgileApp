@@ -12,7 +12,7 @@ public class AppDbContext : DbContext
     public DbSet<Bill> Bills => Set<Bill>();
     public DbSet<Admin> Admins => Set<Admin>();
     public DbSet<BankAccount> BankAccounts => Set<BankAccount>();
-
+    public DbSet<Fee> Fees => Set<Fee>();
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -35,6 +35,35 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<Transaction>()
             .Property(t => t.Amount)
             .HasPrecision(18, 2);
+        modelBuilder.Entity<Fee>()
+    .Property(f => f.Value)
+    .HasPrecision(18, 2);
+
+        modelBuilder.Entity<Fee>()
+            .Property(f => f.MaxFee)
+            .HasPrecision(18, 2);
+        modelBuilder.Entity<Fee>().HasData(
+    new Fee
+    {
+        FeeId = 1,
+        TransactionType = "Deposit",
+        FeeType = "Percent",
+        Value = 0,
+        MaxFee = 0,
+        IsActive = true,
+        UpdatedAt = new DateTime(2026, 1, 1)
+    },
+    new Fee
+    {
+        FeeId = 2,
+        TransactionType = "Withdraw",
+        FeeType = "Percent",
+        Value = 1,
+        MaxFee = 20000,
+        IsActive = true,
+        UpdatedAt = new DateTime(2026, 1, 1)
+    }
+);
         modelBuilder.Entity<User>()
             .HasIndex(u => u.Phone)
             .IsUnique();
@@ -54,6 +83,11 @@ public class AppDbContext : DbContext
             .WithMany(u => u.ReceivedTransactions)
             .HasForeignKey(t => t.ReceiverId)
             .OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<Transaction>()
+    .HasOne(t => t.RelatedTransaction)
+    .WithMany(t => t.RefundTransactions)
+    .HasForeignKey(t => t.RelatedTransactionId)
+    .OnDelete(DeleteBehavior.Restrict);
         modelBuilder.Entity<Bill>()
     .Property(b => b.Amount)
     .HasPrecision(18, 2);

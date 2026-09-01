@@ -4,6 +4,7 @@ using EWalletAgileApp.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace EWalletAgileApp.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260831115412_AddRefundTransactionForUS017")]
+    partial class AddRefundTransactionForUS017
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -184,63 +187,6 @@ namespace EWalletAgileApp.Migrations
                         });
                 });
 
-            modelBuilder.Entity("EWalletAgileApp.Models.Fee", b =>
-                {
-                    b.Property<int>("FeeId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("FeeId"));
-
-                    b.Property<string>("FeeType")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<decimal>("MaxFee")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("TransactionType")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<decimal>("Value")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.HasKey("FeeId");
-
-                    b.ToTable("Fees");
-
-                    b.HasData(
-                        new
-                        {
-                            FeeId = 1,
-                            FeeType = "Percent",
-                            IsActive = true,
-                            MaxFee = 0m,
-                            TransactionType = "Deposit",
-                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            Value = 0m
-                        },
-                        new
-                        {
-                            FeeId = 2,
-                            FeeType = "Percent",
-                            IsActive = true,
-                            MaxFee = 20000m,
-                            TransactionType = "Withdraw",
-                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            Value = 1m
-                        });
-                });
-
             modelBuilder.Entity("EWalletAgileApp.Models.Transaction", b =>
                 {
                     b.Property<int>("TransactionId")
@@ -259,9 +205,6 @@ namespace EWalletAgileApp.Migrations
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
-
-                    b.Property<decimal>("FeeAmount")
-                        .HasColumnType("decimal(18,2)");
 
                     b.Property<int?>("ReceiverId")
                         .HasColumnType("int");

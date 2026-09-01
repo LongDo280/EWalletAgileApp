@@ -99,6 +99,33 @@ public class WalletController : Controller
             .ToListAsync();
 
         ViewBag.Transactions = transactions;
+
+        var months = Enumerable.Range(0, 6)
+            .Select(i => DateTime.Today.AddMonths(-5 + i))
+            .Select(d => new DateTime(d.Year, d.Month, 1))
+            .ToList();
+
+        var spendingTransactions = await _context.Transactions
+            .Where(t =>
+                t.SenderId == CurrentUserId &&
+                t.Status == "Success" &&
+                (t.Type == "Withdraw" || t.Type == "Transfer" || t.Type == "Bill") &&
+                t.CreatedAt >= months[0])
+            .ToListAsync();
+
+        var chartLabels = months
+            .Select(m => $"Th{m.Month:00}/{m.Year}")
+            .ToList();
+
+        var chartValues = months
+            .Select(m => spendingTransactions
+                .Where(t => t.CreatedAt.Year == m.Year && t.CreatedAt.Month == m.Month)
+                .Sum(t => t.Amount))
+            .ToList();
+
+        ViewBag.SpendingChartLabels = chartLabels;
+        ViewBag.SpendingChartValues = chartValues;
+
         return View(user);
     }
 
@@ -138,11 +165,7 @@ public class WalletController : Controller
 
         if (!IsWalletActive(user))
         {
-            ModelState.AddModelError(
-                "",
-                "Ví của bạn đang bị khóa."
-            );
-
+            ModelState.AddModelError("", "Ví của bạn đang bị khóa.");
             return await Deposit();
         }
 
@@ -154,11 +177,7 @@ public class WalletController : Controller
 
         if (bankAccount == null)
         {
-            ModelState.AddModelError(
-                "",
-                "Tài khoản ngân hàng không hợp lệ hoặc chưa được liên kết."
-            );
-
+            ModelState.AddModelError("", "Tài khoản ngân hàng không hợp lệ hoặc chưa được liên kết.");
             return await Deposit();
         }
 
@@ -172,51 +191,47 @@ public class WalletController : Controller
 
         if (user.Balance + amount > user.MaximumBalance)
         {
-            ModelState.AddModelError(
-                "",
-                $"Số dư ví sau khi nạp không được vượt quá {user.MaximumBalance:N0}đ."
-            );
-
+            ModelState.AddModelError("", $"Số dư ví sau khi nạp không được vượt quá {user.MaximumBalance:N0}đ.");
             return await Deposit();
         }
 
-        using var dbTransaction =
-            await _context.Database.BeginTransactionAsync();
+        // US016 - Áp dụng phí nạp tiền (nếu Admin có cấu hình)
+        var fee = await CalculateFeeAsync("Deposit", amount);
+        var netCredit = amount - fee;
+
+        using var dbTransaction = await _context.Database.BeginTransactionAsync();
 
         try
         {
-            user.Balance += amount;
+            user.Balance += netCredit;
 
             _context.Transactions.Add(new Transaction
             {
                 TransactionCode = GenerateTransactionCode(),
                 ReceiverId = user.UserId,
                 Amount = amount,
+                FeeAmount = fee,
                 Type = "Deposit",
                 Description =
-                    $"Nạp tiền từ {bankAccount.BankName} - ****{bankAccount.AccountNumber[^4..]}",
+                    $"Nạp tiền từ {bankAccount.BankName} - ****{bankAccount.AccountNumber[^4..]}" +
+                    (fee > 0 ? $" (phí {fee:N0}đ)" : ""),
                 Status = "Success",
                 CreatedAt = DateTime.Now
             });
 
             await _context.SaveChangesAsync();
-
             await dbTransaction.CommitAsync();
         }
         catch
         {
             await dbTransaction.RollbackAsync();
-
-            ModelState.AddModelError(
-                "",
-                "Có lỗi xảy ra trong quá trình nạp tiền."
-            );
-
+            ModelState.AddModelError("", "Có lỗi xảy ra trong quá trình nạp tiền.");
             return await Deposit();
         }
 
-        TempData["Success"] =
-            $"Nạp thành công {amount:N0}đ từ {bankAccount.BankName}.";
+        TempData["Success"] = fee > 0
+            ? $"Nạp thành công {netCredit:N0}đ vào ví (đã trừ phí {fee:N0}đ) từ {bankAccount.BankName}."
+            : $"Nạp thành công {amount:N0}đ từ {bankAccount.BankName}.";
 
         return RedirectToAction("Index");
     }
@@ -246,9 +261,9 @@ public class WalletController : Controller
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Withdraw(
-        decimal amount,
-        string pinCode,
-        int bankAccountId)
+    decimal amount,
+    string pinCode,
+    int bankAccountId)
     {
         var redirect = CheckLogin();
         if (redirect != null) return redirect;
@@ -260,11 +275,7 @@ public class WalletController : Controller
 
         if (!IsWalletActive(user))
         {
-            ModelState.AddModelError(
-                "",
-                "Ví của bạn đang bị khóa."
-            );
-
+            ModelState.AddModelError("", "Ví của bạn đang bị khóa.");
             return await Withdraw();
         }
 
@@ -276,11 +287,7 @@ public class WalletController : Controller
 
         if (bankAccount == null)
         {
-            ModelState.AddModelError(
-                "",
-                "Tài khoản ngân hàng không hợp lệ."
-            );
-
+            ModelState.AddModelError("", "Tài khoản ngân hàng không hợp lệ.");
             return await Withdraw();
         }
 
@@ -290,8 +297,7 @@ public class WalletController : Controller
             return await Withdraw();
         }
 
-        var validation =
-            await ValidateTransactionLimitAsync(user, amount);
+        var validation = await ValidateTransactionLimitAsync(user, amount);
 
         if (!validation.IsValid)
         {
@@ -299,48 +305,43 @@ public class WalletController : Controller
             return await Withdraw();
         }
 
-        if (user.Balance < amount)
-        {
-            ModelState.AddModelError(
-                "",
-                "Số dư ví không đủ."
-            );
+        // US016 - Áp dụng phí rút tiền (nếu Admin có cấu hình)
+        var fee = await CalculateFeeAsync("Withdraw", amount);
+        var totalDeduct = amount + fee;
 
+        if (user.Balance < totalDeduct)
+        {
+            ModelState.AddModelError("", $"Số dư ví không đủ (bao gồm phí {fee:N0}đ).");
             return await Withdraw();
         }
 
-        using var dbTransaction =
-            await _context.Database.BeginTransactionAsync();
+        using var dbTransaction = await _context.Database.BeginTransactionAsync();
 
         try
         {
-            user.Balance -= amount;
+            user.Balance -= totalDeduct;
 
             _context.Transactions.Add(new Transaction
             {
                 TransactionCode = GenerateTransactionCode(),
                 SenderId = user.UserId,
                 Amount = amount,
+                FeeAmount = fee,
                 Type = "Withdraw",
                 Description =
-                    $"Rút tiền về {bankAccount.BankName} - ****{bankAccount.AccountNumber[^4..]}",
+                    $"Rút tiền về {bankAccount.BankName} - ****{bankAccount.AccountNumber[^4..]}" +
+                    (fee > 0 ? $" (phí {fee:N0}đ)" : ""),
                 Status = "Success",
                 CreatedAt = DateTime.Now
             });
 
             await _context.SaveChangesAsync();
-
             await dbTransaction.CommitAsync();
         }
         catch
         {
             await dbTransaction.RollbackAsync();
-
-            ModelState.AddModelError(
-                "",
-                "Có lỗi xảy ra trong quá trình rút tiền."
-            );
-
+            ModelState.AddModelError("", "Có lỗi xảy ra trong quá trình rút tiền.");
             return await Withdraw();
         }
 
@@ -965,4 +966,67 @@ public class WalletController : Controller
 
         return View(model);
     }
+    // US016 - Lấy biểu phí đang áp dụng (nếu có) và tính số tiền phí
+    // cho một giao dịch nạp/rút theo loại "Deposit"/"Withdraw".
+    private async Task<decimal> CalculateFeeAsync(string transactionType, decimal amount)
+    {
+        var fee = await _context.Fees
+            .Where(f => f.TransactionType == transactionType && f.IsActive)
+            .OrderByDescending(f => f.UpdatedAt)
+            .FirstOrDefaultAsync();
+
+        if (fee == null || fee.Value <= 0)
+            return 0;
+
+        decimal feeAmount = fee.FeeType == "Fixed"
+            ? fee.Value
+            : Math.Round(amount * fee.Value / 100m, 0);
+
+        if (fee.MaxFee > 0 && feeAmount > fee.MaxFee)
+            feeAmount = fee.MaxFee;
+
+        return feeAmount;
+    }
+
+#if DEBUG
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> CreateTestFailedTransaction(decimal amount)
+    {
+        var redirect = CheckLogin();
+
+        if (redirect != null)
+            return redirect;
+
+        var user = await GetCurrentUserAsync();
+
+        if (user == null)
+            return RedirectToAction("Login", "Account");
+
+        if (amount < 1000)
+            amount = 100000;
+
+        var transaction = new Transaction
+        {
+            TransactionCode = GenerateTransactionCode(),
+            ReceiverId = user.UserId,
+            Amount = amount,
+            Type = "Deposit",
+            Description = "Giao dịch nạp tiền lỗi - TEST US017",
+            Status = "Failed",
+            CreatedAt = DateTime.Now
+        };
+
+        _context.Transactions.Add(transaction);
+
+        await _context.SaveChangesAsync();
+
+        TempData["Success"] =
+            $"Đã tạo giao dịch lỗi {amount:N0}đ để kiểm thử US017.";
+
+        return RedirectToAction("History");
+    }
+
+#endif
 }

@@ -27,4 +27,11 @@ public class Transaction
     public string Status { get; set; } = "Success";
 
     public DateTime CreatedAt { get; set; } = DateTime.Now;
+    public decimal FeeAmount { get; set; } = 0;
+    public int? RelatedTransactionId { get; set; }
+
+    public Transaction? RelatedTransaction { get; set; }
+
+    public ICollection<Transaction> RefundTransactions { get; set; }
+        = new List<Transaction>();
 }

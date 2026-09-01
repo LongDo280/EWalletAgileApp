@@ -1,6 +1,32 @@
 @model List<Transaction>
 @{
     ViewData["Title"] = "Lịch sử giao dịch";
+    @if (Context.Session.GetString("Role") == "Admin" ||
+     Context.Session.GetString("Role") == "Staff")
+    {
+        <div style="margin-bottom: 20px; padding: 15px; border: 1px dashed #999;">
+            <strong>TEST US017 - Hoàn tiền giao dịch lỗi</strong>
+
+            <form asp-controller="Wallet"
+                  asp-action="CreateTestFailedTransaction"
+                  method="post"
+                  style="margin-top: 10px;">
+
+                @Html.AntiForgeryToken()
+
+                <input type="number"
+                       name="amount"
+                       value="100000"
+                       min="1000"
+                       step="1000" />
+
+                <button type="submit">
+                    Tạo giao dịch lỗi TEST
+                </button>
+
+            </form>
+        </div>
+    }
 }
 <div class="card">
     <h1>Lịch sử giao dịch</h1>
@@ -42,6 +68,10 @@
                         else if (item.Type == "Bill")
                         {
                             <span>Thanh toán hóa đơn</span>
+                        }
+                        else if (item.Type == "Refund")
+                        {
+                            <span>Hoàn tiền</span>
                         }
                         else
                         {
