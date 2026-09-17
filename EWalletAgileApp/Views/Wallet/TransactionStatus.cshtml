@@ -1,0 +1,82 @@
+﻿@model Transaction
+@{
+    ViewData["Title"] = "Tra cứu trạng thái giao dịch";
+    var query = Context.Request.Query["code"].ToString();
+}
+
+<div class="card form-card">
+
+    <div class="form-icon">
+        <i class="fa-solid fa-magnifying-glass-dollar"></i>
+    </div>
+
+    <h1>Tra cứu trạng thái giao dịch</h1>
+    <p class="form-description">Nhập mã giao dịch để xem trạng thái nạp/rút tiền.</p>
+
+    <form method="get">
+        <label><i class="fa-solid fa-hashtag"></i> Mã giao dịch</label>
+        <input name="code" value="@query" placeholder="EWxxxxxxxxxxxx" autocomplete="off" />
+        <button class="btn-full" type="submit">
+            <i class="fa-solid fa-magnifying-glass"></i> Tra cứu
+        </button>
+    </form>
+
+    @if (ViewBag.NotFound == true)
+    {
+        <div class="empty-state">
+            <i class="fa-solid fa-circle-exclamation"></i>
+            <p>Không tìm thấy giao dịch với mã này.</p>
+        </div>
+    }
+
+    @if (Model != null)
+    {
+        var typeIcon = Model.Type switch
+        {
+            "Deposit" => "fa-arrow-down",
+            "Withdraw" => "fa-arrow-up",
+            "Transfer" => "fa-paper-plane",
+            "PayBill" => "fa-file-invoice-dollar",
+            _ => "fa-money-bill-transfer"
+        };
+        var statusClass = Model.Status switch
+        {
+            "Pending" => "pending",
+            "Success" => "success",
+            _ => "cancelled"
+        };
+        var statusLabel = Model.Status switch
+        {
+            "Pending" => "Đang xử lý",
+            "Success" => "Thành công",
+            "Cancelled" => "Đã hủy",
+            _ => Model.Status
+        };
+
+        <div class="txn-result">
+            <div class="txn-result-header">
+                <div class="txn-icon">
+                    <i class="fa-solid @typeIcon"></i>
+                </div>
+                <span class="txn-status-badge @statusClass">@statusLabel</span>
+            </div>
+
+            <div class="txn-amount">@Model.Amount.ToString("N0") đ</div>
+
+            <div class="txn-row"><span>Mã giao dịch</span><strong>@Model.TransactionCode</strong></div>
+            <div class="txn-row"><span>Loại giao dịch</span><strong>@Model.Type</strong></div>
+            <div class="txn-row"><span>Thời gian</span><strong>@Model.CreatedAt.ToString("dd/MM/yyyy HH:mm")</strong></div>
+        </div>
+
+        @if (Model.Status == "Pending" && Model.Type == "Withdraw")
+        {
+            <form asp-action="CancelWithdraw" asp-route-id="@Model.TransactionId" method="post">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn-full" style="background:#dc2626;">
+                    <i class="fa-solid fa-ban"></i> Hủy giao dịch này
+                </button>
+            </form>
+        }
+    }
+
+</div>

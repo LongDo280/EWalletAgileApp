@@ -1,0 +1,10 @@
+﻿@model User
+@{
+    ViewData["Title"] = "QR nhận tiền của tôi";
+}
+<div class="card form-card" style="text-align:center;">
+    <h1>QR nhận tiền</h1>
+    <p>Đưa mã này cho người khác quét để chuyển tiền vào ví của bạn.</p>
+    <img src="@Url.Action("MyQrImage")" style="width:220px;height:220px;margin:16px auto;" />
+    <p><strong>@Model.Phone</strong></p>
+</div>

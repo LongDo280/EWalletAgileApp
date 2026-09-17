@@ -60,19 +60,8 @@ public class ReconciliationController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Refund(int transactionId)
     {
-        // ==========================================
-        // 1. Kiểm tra đăng nhập
-        // ==========================================
-
         if (CurrentUserId == null)
             return RedirectToAction("Login", "Account");
-
-
-        // ==========================================
-        // 2. Kiểm tra quyền
-        // Admin hoặc Staff được phép đối soát
-        // ==========================================
-
         if (!IsStaff())
         {
             TempData["Error"] =
@@ -80,12 +69,6 @@ public class ReconciliationController : Controller
 
             return RedirectToAction(nameof(Index));
         }
-
-
-        // ==========================================
-        // 3. Tìm giao dịch gốc
-        // ==========================================
-
         var transaction = await _context.Transactions
             .Include(t => t.Sender)
             .Include(t => t.Receiver)
@@ -100,12 +83,6 @@ public class ReconciliationController : Controller
 
             return RedirectToAction(nameof(Index));
         }
-
-
-        // ==========================================
-        // 4. Chỉ cho phép refund giao dịch Failed
-        // ==========================================
-
         if (transaction.Status != "Failed")
         {
             TempData["Error"] =
@@ -113,12 +90,6 @@ public class ReconciliationController : Controller
 
             return RedirectToAction(nameof(Index));
         }
-
-
-        // ==========================================
-        // 5. Kiểm tra đã Refund trước đó chưa
-        // ==========================================
-
         var alreadyRefunded =
             await _context.Transactions
                 .AnyAsync(t =>
@@ -135,11 +106,6 @@ public class ReconciliationController : Controller
 
             return RedirectToAction(nameof(Index));
         }
-
-
-        // ==========================================
-        // 6. Xác định user nhận tiền
-        // ==========================================
 
         User? user = null;
 
@@ -160,12 +126,6 @@ public class ReconciliationController : Controller
 
             return RedirectToAction(nameof(Index));
         }
-
-
-        // ==========================================
-        // 7. Kiểm tra hạn mức ví
-        // ==========================================
-
         if (user.Balance + transaction.Amount >
             user.MaximumBalance)
         {
@@ -174,29 +134,13 @@ public class ReconciliationController : Controller
 
             return RedirectToAction(nameof(Index));
         }
-
-
-        // ==========================================
-        // 8. Bắt đầu Database Transaction
-        // ==========================================
-
         await using var dbTransaction =
             await _context.Database.BeginTransactionAsync();
 
 
         try
         {
-            // ======================================
-            // 9. Cộng tiền vào ví
-            // ======================================
-
             user.Balance += transaction.Amount;
-
-
-            // ======================================
-            // 10. Tạo giao dịch Refund
-            // ======================================
-
             var refundTransaction = new Transaction
             {
                 TransactionCode =
@@ -222,24 +166,9 @@ public class ReconciliationController : Controller
 
             _context.Transactions.Add(refundTransaction);
 
-
-            // ======================================
-            // 11. Đánh dấu giao dịch gốc đã Refund
-            // ======================================
-
             transaction.Status = "Refunded";
 
-
-            // ======================================
-            // 12. Lưu Database
-            // ======================================
-
             await _context.SaveChangesAsync();
-
-
-            // ======================================
-            // 13. Commit
-            // ======================================
 
             await dbTransaction.CommitAsync();
 
@@ -252,10 +181,6 @@ public class ReconciliationController : Controller
         }
         catch
         {
-            // ======================================
-            // 14. Nếu lỗi → Rollback
-            // ======================================
-
             await dbTransaction.RollbackAsync();
 
             TempData["Error"] =

@@ -2,10 +2,7 @@
 
 @{
     ViewData["Title"] = "Rút tiền";
-
-    var bankAccounts =
-        ViewBag.BankAccounts as List<BankAccount>
-        ?? new List<BankAccount>();
+    var bankAccounts = ViewBag.BankAccounts as List<BankAccount> ?? new List<BankAccount>();
 }
 
 <div class="card form-card">
@@ -16,13 +13,12 @@
 
     <h1>Rút tiền khỏi ví</h1>
 
-    <p class="form-description">
-        Số dư hiện tại:
-        <strong>@Model.Balance.ToString("N0") đ</strong>
-    </p>
+    <div class="balance-pill">
+        <i class="fa-solid fa-wallet"></i>
+        Số dư hiện tại: <strong>@Model.Balance.ToString("N0") đ</strong>
+    </div>
 
     <form asp-action="Withdraw" method="post">
-
         @Html.AntiForgeryToken()
 
         <div asp-validation-summary="All" class="text-danger"></div>
@@ -30,84 +26,95 @@
         @if (!bankAccounts.Any())
         {
             <div class="empty-state">
-
                 <i class="fa-solid fa-building-columns"></i>
-
                 <h3>Chưa có tài khoản ngân hàng</h3>
-
-                <p>
-                    Bạn cần liên kết tài khoản ngân hàng
-                    trước khi rút tiền.
-                </p>
-
-                <a asp-action="LinkBank"
-                   class="btn btn-light">
-
-                    <i class="fa-solid fa-link"></i>
-                    Liên kết ngân hàng
-
+                <p>Bạn cần liên kết tài khoản ngân hàng trước khi rút tiền.</p>
+                <a asp-action="LinkBank" class="btn btn-light">
+                    <i class="fa-solid fa-link"></i> Liên kết ngân hàng
                 </a>
-
             </div>
         }
         else
         {
-            <label>
+            <label class="form-label">
                 <i class="fa-solid fa-building-columns"></i>
                 Tài khoản nhận tiền
             </label>
 
             <select name="bankAccountId" required>
-
-                <option value="">
-                    -- Chọn tài khoản ngân hàng --
-                </option>
-
+                <option value="" disabled selected>-- Chọn tài khoản ngân hàng --</option>
                 @foreach (var bank in bankAccounts)
                 {
-                    var lastFour =
-                        bank.AccountNumber.Length >= 4
-                            ? bank.AccountNumber[^4..]
-                            : bank.AccountNumber;
-
-                    <option value="@bank.BankAccountId">
-                        @bank.BankName - ****@lastFour
-                    </option>
+                    var lastFour = bank.AccountNumber.Length >= 4 ? bank.AccountNumber[^4..] : bank.AccountNumber;
+                    <option value="@bank.BankAccountId">@bank.BankName - ****@lastFour</option>
                 }
-
             </select>
 
-            <label>
+            <label class="form-label">
                 <i class="fa-solid fa-money-bill"></i>
                 Số tiền
             </label>
 
-            <input name="amount"
-                   type="number"
-                   min="1000"
-                   step="1000"
-                   placeholder="Ví dụ: 100000"
-                   required />
+            <div class="input-amount-wrapper">
+                <input id="displayAmount" type="text" inputmode="numeric" placeholder="Ví dụ: 100,000" required />
+                <span class="currency-suffix">đ</span>
+            </div>
 
-            <label>
-                <i class="fa-solid fa-lock"></i>
-                Mã PIN
-            </label>
+            <input id="realAmount" name="amount" type="hidden" min="1000" required />
 
-            <input name="pinCode"
-                   type="password"
-                   maxlength="6"
-                   placeholder="Nhập mã PIN"
-                   required />
+            <div class="quick-chips">
+                <button type="button" class="chip-btn" data-value="100000">100.000 đ</button>
+                <button type="button" class="chip-btn" data-value="500000">500.000 đ</button>
+                <button type="button" class="chip-btn" data-value="1000000">1.000.000 đ</button>
+                <button type="button" class="chip-btn chip-max" data-value="@Math.Floor(Model.Balance)">Tối đa</button>
+            </div>
 
-            <button class="btn-full"
-                    type="submit">
+            <div class="fee-note">
+                <i class="fa-solid fa-circle-info"></i>
+                Phí giao dịch: <strong>Miễn phí</strong>
+            </div>
 
-                <i class="fa-solid fa-money-bill-transfer"></i>
-
-                Xác nhận rút tiền
-
+            <button class="btn-full" type="submit">
+                Tiếp tục
+                <i class="fa-solid fa-arrow-right"></i>
             </button>
         }
     </form>
 </div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const displayInput = document.getElementById("displayAmount");
+        const hiddenInput = document.getElementById("realAmount");
+        const chips = document.querySelectorAll(".chip-btn");
+
+        function formatCurrency(val) {
+            if (!val) return "";
+            return parseInt(val, 10).toLocaleString('vi-VN');
+        }
+
+        function clearActiveChips() {
+            chips.forEach(c => c.classList.remove("active"));
+        }
+
+        if (displayInput) {
+            displayInput.addEventListener("input", function() {
+                let rawValue = this.value.replace(/\D/g, "");
+                hiddenInput.value = rawValue;
+                this.value = formatCurrency(rawValue);
+                clearActiveChips();
+            });
+        }
+
+        chips.forEach(chip => {
+            chip.addEventListener("click", function() {
+                clearActiveChips();
+                this.classList.add("active");
+
+                const val = this.getAttribute("data-value");
+                hiddenInput.value = val;
+                displayInput.value = formatCurrency(val);
+            });
+        });
+    });
+</script>

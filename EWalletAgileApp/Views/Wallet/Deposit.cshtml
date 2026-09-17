@@ -4,59 +4,46 @@
     var bankAccounts =
         ViewBag.BankAccounts as List<BankAccount>
         ?? new List<BankAccount>();
+
+    var transactionLimit = (decimal)(ViewBag.TransactionLimit ?? 0m);
+    var currentBalance = (decimal)(ViewBag.CurrentBalance ?? 0m);
 }
 
-<div class="card form-card">
-
-    <div class="form-icon">
-        <i class="fa-solid fa-circle-plus"></i>
-    </div>
-
+<div class="page-heading">
     <h1>Nạp tiền vào ví</h1>
+    <p>Chọn ngân hàng, nhập số tiền và xem trước biên nhận trước khi xác nhận.</p>
+</div>
 
-    <p class="form-description">
-        Chọn tài khoản ngân hàng và nhập số tiền muốn nạp.
-    </p>
-
-    <form asp-action="Deposit" method="post">
+@if (!bankAccounts.Any())
+{
+    <div class="card">
+        <div class="empty-state">
+            <i class="fa-solid fa-building-columns"></i>
+            <h3>Chưa có tài khoản ngân hàng</h3>
+            <p>Bạn cần liên kết ít nhất một tài khoản ngân hàng trước khi nạp tiền.</p>
+            <a asp-action="LinkBank" class="btn btn-light">
+                <i class="fa-solid fa-link"></i>
+                Liên kết ngân hàng
+            </a>
+        </div>
+    </div>
+}
+else
+{
+    <form asp-action="Deposit" method="post" id="depositForm" class="deposit-layout">
 
         @Html.AntiForgeryToken()
 
-        <div asp-validation-summary="All" class="text-danger"></div>
+        <div asp-validation-summary="All" class="text-danger deposit-validation"></div>
 
-        @if (!bankAccounts.Any())
-        {
-            <div class="empty-state">
+        <div class="card deposit-panel">
 
+            <h2 class="deposit-section-title">
                 <i class="fa-solid fa-building-columns"></i>
+                Nguồn tiền
+            </h2>
 
-                <h3>Chưa có tài khoản ngân hàng</h3>
-
-                <p>
-                    Bạn cần liên kết ít nhất một tài khoản ngân hàng
-                    trước khi nạp tiền.
-                </p>
-
-                <a asp-action="LinkBank" class="btn btn-light">
-                    <i class="fa-solid fa-link"></i>
-                    Liên kết ngân hàng
-                </a>
-
-            </div>
-        }
-        else
-        {
-            <label>
-                <i class="fa-solid fa-building-columns"></i>
-                Tài khoản ngân hàng
-            </label>
-
-            <select name="bankAccountId" required>
-
-                <option value="">
-                    -- Chọn tài khoản ngân hàng --
-                </option>
-
+            <div class="bank-option-list" id="bankOptionList">
                 @foreach (var bank in bankAccounts)
                 {
                     var lastFour =
@@ -64,37 +51,172 @@
                             ? bank.AccountNumber[^4..]
                             : bank.AccountNumber;
 
-                    <option value="@bank.BankAccountId">
-                        @bank.BankName - ****@lastFour
-                    </option>
+                    <label class="bank-option">
+                        <input type="radio"
+                               name="bankAccountId"
+                               value="@bank.BankAccountId"
+                               data-bank-name="@bank.BankName"
+                               data-bank-last-four="@lastFour"
+                               required />
+                        <span class="bank-option-icon">
+                            <i class="fa-solid fa-building-columns"></i>
+                        </span>
+                        <span class="bank-option-info">
+                            <strong>@bank.BankName</strong>
+                            <span>**** @lastFour</span>
+                        </span>
+                        <i class="fa-solid fa-circle-check bank-option-check"></i>
+                    </label>
                 }
+            </div>
 
-            </select>
-
-            <label>
-                <i class="fa-solid fa-money-bill"></i>
+            <h2 class="deposit-section-title">
+                <i class="fa-solid fa-money-bill-wave"></i>
                 Số tiền cần nạp
-            </label>
+            </h2>
 
-            <input name="amount"
-                   type="number"
-                   min="1000"
-                   step="1000"
-                   placeholder="Ví dụ: 100000"
-                   required />
+            <div class="amount-input-wrap">
+                <input type="text"
+                       id="amountDisplay"
+                       inputmode="numeric"
+                       autocomplete="off"
+                       placeholder="0"
+                       class="amount-input" />
+                <span class="amount-suffix">đ</span>
+            </div>
+            <input type="hidden" name="amount" id="amountRaw" />
 
-            <p class="hint">
-                Hạn mức mỗi giao dịch:
-                <strong>@User.FindFirst("TransactionLimit")?.Value</strong>
-            </p>
+            <div class="amount-chip-row">
+                @foreach (var quick in new[] { 50000, 100000, 200000, 500000, 1000000 })
+                {
+                    <button type="button" class="amount-chip" data-amount="@quick">
+                        @(quick >= 1000000 ? $"{quick / 1000000}tr" : $"{quick / 1000}k")
+                    </button>
+                }
+            </div>
 
-            <button class="btn-full" type="submit">
+            @if (transactionLimit > 0)
+            {
+                <div class="limit-meter">
+                    <div class="limit-meter-track">
+                        <div class="limit-meter-fill" id="limitMeterFill"></div>
+                    </div>
+                    <div class="limit-meter-labels">
+                        <span>Hạn mức mỗi giao dịch</span>
+                        <strong>@transactionLimit.ToString("N0") đ</strong>
+                    </div>
+                </div>
+                <p class="limit-warning" id="limitWarning">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    Số tiền vượt quá hạn mức cho phép mỗi giao dịch.
+                </p>
+            }
+        </div>
 
+        <aside class="card deposit-summary">
+            <h2 class="deposit-section-title">
+                <i class="fa-solid fa-receipt"></i>
+                Biên nhận
+            </h2>
+
+            <div class="summary-row">
+                <span>Từ tài khoản</span>
+                <strong id="summaryBank">Chưa chọn</strong>
+            </div>
+
+            <div class="summary-row">
+                <span>Số tiền nạp</span>
+                <strong id="summaryAmount">0 đ</strong>
+            </div>
+
+            <div class="summary-row">
+                <span>Phí giao dịch</span>
+                <strong>Theo biểu phí hiện hành</strong>
+            </div>
+
+            <div class="summary-divider"></div>
+
+            <div class="summary-row">
+                <span>Số dư hiện tại</span>
+                <strong>@currentBalance.ToString("N0") đ</strong>
+            </div>
+
+            <div class="summary-row summary-row-highlight">
+                <span>Số dư dự kiến sau khi nạp</span>
+                <strong id="summaryBalanceAfter">@currentBalance.ToString("N0") đ</strong>
+            </div>
+
+            <button class="btn-full deposit-submit" type="submit">
                 <i class="fa-solid fa-circle-check"></i>
-
                 Xác nhận nạp tiền
-
             </button>
-        }
+        </aside>
     </form>
-</div>
+}
+
+@if (bankAccounts.Any())
+{
+    <script>
+        (function() {
+            var form = document.getElementById('depositForm');
+            if (!form) return;
+
+            var amountDisplay = document.getElementById('amountDisplay');
+            var amountRaw = document.getElementById('amountRaw');
+            var chips = document.querySelectorAll('.amount-chip');
+            var bankOptions = document.querySelectorAll('#bankOptionList .bank-option');
+            var summaryBank = document.getElementById('summaryBank');
+            var summaryAmount = document.getElementById('summaryAmount');
+            var summaryBalanceAfter = document.getElementById('summaryBalanceAfter');
+            var limitFill = document.getElementById('limitMeterFill');
+            var limitWarning = document.getElementById('limitWarning');
+
+            var transactionLimit = @transactionLimit.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            var currentBalance = @currentBalance.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+            function formatVnd(n) {
+                return n.toLocaleString('vi-VN') + ' đ';
+            }
+
+            function setAmount(value) {
+                var digits = (value || '').toString().replace(/[^\d]/g, '');
+                var numeric = digits ? parseInt(digits, 10) : 0;
+
+                amountDisplay.value = digits ? numeric.toLocaleString('vi-VN') : '';
+                amountRaw.value = digits ? numeric.toString() : '';
+
+                summaryAmount.textContent = formatVnd(numeric);
+                summaryBalanceAfter.textContent = formatVnd(currentBalance + numeric);
+
+                if (limitFill && transactionLimit > 0) {
+                    var ratio = Math.min(numeric / transactionLimit, 1);
+                    limitFill.style.width = (ratio * 100) + '%';
+                    limitFill.classList.toggle('limit-meter-fill-danger', numeric > transactionLimit);
+                    limitWarning.classList.toggle('limit-warning-visible', numeric > transactionLimit);
+                }
+            }
+
+            amountDisplay.addEventListener('input', function(e) {
+                setAmount(e.target.value);
+            });
+
+            chips.forEach(function(chip) {
+                chip.addEventListener('click', function() {
+                    setAmount(chip.getAttribute('data-amount'));
+                });
+            });
+
+            bankOptions.forEach(function(option) {
+                var input = option.querySelector('input');
+                input.addEventListener('change', function() {
+                    bankOptions.forEach(function(o) { o.classList.remove('bank-option-selected'); });
+                    option.classList.add('bank-option-selected');
+                    summaryBank.textContent =
+                        input.getAttribute('data-bank-name') + ' - **** ' + input.getAttribute('data-bank-last-four');
+                });
+            });
+
+            setAmount('');
+        })();
+    </script>
+}

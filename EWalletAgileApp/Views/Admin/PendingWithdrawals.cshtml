@@ -1,0 +1,31 @@
+﻿@model List<Transaction>
+@{
+    ViewData["Title"] = "Yêu cầu rút tiền chờ xử lý";
+}
+<div class="card">
+    <h1>Yêu cầu rút tiền chờ xử lý</h1>
+    <table>
+        <thead><tr><th>Mã GD</th><th>Người rút</th><th>Số tiền</th><th>Phí</th><th>Thời gian</th><th>Thao tác</th></tr></thead>
+        <tbody>
+            @foreach (var t in Model)
+            {
+                <tr>
+                    <td>@t.TransactionCode</td>
+                    <td>@t.Sender?.FullName</td>
+                    <td>@t.Amount.ToString("N0") đ</td>
+                    <td>@t.FeeAmount.ToString("N0") đ</td>
+                    <td>@t.CreatedAt.ToString("dd/MM HH:mm")</td>
+                    <td>
+                        <form asp-action="ApproveWithdrawal" asp-route-id="@t.TransactionId" method="post">
+                            <button type="submit" class="btn btn-light">Duyệt</button>
+                        </form>
+                    </td>
+                </tr>
+            }
+            @if (!Model.Any())
+            {
+                <tr><td colspan="6" style="text-align:center;">Không có yêu cầu chờ xử lý</td></tr>
+            }
+        </tbody>
+    </table>
+</div>

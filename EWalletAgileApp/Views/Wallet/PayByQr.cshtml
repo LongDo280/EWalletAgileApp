@@ -1,0 +1,14 @@
+﻿@{
+    ViewData["Title"] = "Thanh toán bằng QR";
+}
+<div class="card form-card">
+    <h1>Thanh toán bằng QR</h1>
+    <p class="form-description">Dán/nhập nội dung mã QR đã quét được (số điện thoại người nhận).</p>
+    <form asp-action="PayByQr" method="post">
+        @Html.AntiForgeryToken()
+        <div asp-validation-summary="All" class="text-danger"></div>
+        <label>Nội dung mã QR</label>
+        <input name="qrContent" placeholder="0900000002" />
+        <button class="btn-full" type="submit">Tiếp tục</button>
+    </form>
+</div>

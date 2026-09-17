@@ -126,6 +126,22 @@ public class WalletController : Controller
         ViewBag.SpendingChartLabels = chartLabels;
         ViewBag.SpendingChartValues = chartValues;
 
+        var currentMonth = months[months.Count - 1];
+
+        ViewBag.MonthlyExpense = chartValues[chartValues.Count - 1];
+
+        ViewBag.MonthlyTransactionCount = await _context.Transactions
+            .Where(t =>
+                (t.SenderId == CurrentUserId || t.ReceiverId == CurrentUserId) &&
+                t.Status == "Success" &&
+                t.CreatedAt.Year == currentMonth.Year &&
+                t.CreatedAt.Month == currentMonth.Month)
+            .CountAsync();
+
+        ViewBag.LinkedBankCount = await _context.BankAccounts
+            .Where(b => b.UserId == CurrentUserId && b.Status == "Linked")
+            .CountAsync();
+
         return View(user);
     }
 
@@ -147,7 +163,9 @@ public class WalletController : Controller
             .ToListAsync();
 
         ViewBag.BankAccounts = bankAccounts;
-
+        ViewBag.TransactionLimit = user.TransactionLimit;   
+        ViewBag.DailyLimit = user.DailyLimit;               
+        ViewBag.CurrentBalance = user.Balance;
         return View();
     }
 
@@ -258,20 +276,16 @@ public class WalletController : Controller
         return View(user);
     }
 
+    // BƯỚC 1: Xử lý thông tin rút tiền (Không kiểm tra mã PIN ở đây)
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Withdraw(
-    decimal amount,
-    string pinCode,
-    int bankAccountId)
+    public async Task<IActionResult> Withdraw(decimal amount, int bankAccountId)
     {
         var redirect = CheckLogin();
         if (redirect != null) return redirect;
 
         var user = await GetCurrentUserAsync();
-
-        if (user == null)
-            return RedirectToAction("Login", "Account");
+        if (user == null) return RedirectToAction("Login", "Account");
 
         if (!IsWalletActive(user))
         {
@@ -291,21 +305,13 @@ public class WalletController : Controller
             return await Withdraw();
         }
 
-        if (user.PinCode != pinCode)
-        {
-            ModelState.AddModelError("", "Sai mã PIN.");
-            return await Withdraw();
-        }
-
         var validation = await ValidateTransactionLimitAsync(user, amount);
-
         if (!validation.IsValid)
         {
             ModelState.AddModelError("", validation.Message);
             return await Withdraw();
         }
 
-        // US016 - Áp dụng phí rút tiền (nếu Admin có cấu hình)
         var fee = await CalculateFeeAsync("Withdraw", amount);
         var totalDeduct = amount + fee;
 
@@ -314,6 +320,64 @@ public class WalletController : Controller
             ModelState.AddModelError("", $"Số dư ví không đủ (bao gồm phí {fee:N0}đ).");
             return await Withdraw();
         }
+
+        // Lưu thông tin hợp lệ vào Session để chờ xác nhận PIN
+        HttpContext.Session.SetString("WithdrawAmount", amount.ToString());
+        HttpContext.Session.SetInt32("WithdrawBankId", bankAccountId);
+        HttpContext.Session.SetString("WithdrawFee", fee.ToString());
+
+        return RedirectToAction("ConfirmWithdraw");
+    }
+
+    // BƯỚC 2: Màn hình yêu cầu nhập mã PIN
+    public IActionResult ConfirmWithdraw()
+    {
+        var redirect = CheckLogin();
+        if (redirect != null) return redirect;
+
+        // Nếu không có session rút tiền, đẩy về lại trang rút tiền
+        if (HttpContext.Session.GetInt32("WithdrawBankId") == null)
+            return RedirectToAction("Withdraw");
+
+        return View();
+    }
+
+    // BƯỚC 3: Xác nhận mã PIN và tiến hành trừ tiền
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ConfirmWithdraw(string pinCode)
+    {
+        var redirect = CheckLogin();
+        if (redirect != null) return redirect;
+
+        var user = await GetCurrentUserAsync();
+        if (user == null) return RedirectToAction("Login", "Account");
+
+        var bankId = HttpContext.Session.GetInt32("WithdrawBankId");
+        var amountStr = HttpContext.Session.GetString("WithdrawAmount");
+        var feeStr = HttpContext.Session.GetString("WithdrawFee");
+
+        if (bankId == null || amountStr == null || feeStr == null)
+            return RedirectToAction("Withdraw");
+
+        if (user.PinCode != pinCode)
+        {
+            ModelState.AddModelError("", "Sai mã PIN.");
+            return View(); // Trả lại view nhập PIN
+        }
+
+        decimal amount = decimal.Parse(amountStr);
+        decimal fee = decimal.Parse(feeStr);
+        var totalDeduct = amount + fee;
+
+        // Kiểm tra lại số dư lần cuối trước khi trừ (đề phòng tab khác đã tiêu tiền)
+        if (user.Balance < totalDeduct)
+        {
+            ModelState.AddModelError("", "Số dư không đủ để thực hiện.");
+            return View();
+        }
+
+        var bankAccount = await _context.BankAccounts.FindAsync(bankId.Value);
 
         using var dbTransaction = await _context.Database.BeginTransactionAsync();
 
@@ -331,7 +395,7 @@ public class WalletController : Controller
                 Description =
                     $"Rút tiền về {bankAccount.BankName} - ****{bankAccount.AccountNumber[^4..]}" +
                     (fee > 0 ? $" (phí {fee:N0}đ)" : ""),
-                Status = "Success",
+                Status = "Pending",
                 CreatedAt = DateTime.Now
             });
 
@@ -342,155 +406,172 @@ public class WalletController : Controller
         {
             await dbTransaction.RollbackAsync();
             ModelState.AddModelError("", "Có lỗi xảy ra trong quá trình rút tiền.");
-            return await Withdraw();
+            return View();
         }
 
-        TempData["Success"] =
-            $"Rút thành công {amount:N0}đ về {bankAccount.BankName}.";
+        // Dọn dẹp Session sau khi thành công
+        HttpContext.Session.Remove("WithdrawAmount");
+        HttpContext.Session.Remove("WithdrawBankId");
+        HttpContext.Session.Remove("WithdrawFee");
+
+        TempData["Success"] = $"Rút thành công {amount:N0}đ về {bankAccount.BankName}.";
 
         return RedirectToAction("Index");
     }
 
-    public IActionResult Transfer() => View();
+    public async Task<IActionResult> Transfer(string? receiverPhone = null)
+    {
+        var model = new TransferViewModel();
+        if (!string.IsNullOrWhiteSpace(receiverPhone)) model.ReceiverPhone = receiverPhone;
+
+        var currentUser = await GetCurrentUserAsync();
+        ViewBag.CurrentBalance = currentUser?.Balance ?? 0m;
+
+        return View(model);
+    }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Transfer(
-    TransferViewModel model)
+    public async Task<IActionResult> Transfer(TransferViewModel model)
     {
         var redirect = CheckLogin();
-
-        if (redirect != null)
-            return redirect;
-
-        if (!ModelState.IsValid)
-            return View(model);
+        if (redirect != null) return redirect;
+        if (!ModelState.IsValid) return View(model);
 
         var sender = await GetCurrentUserAsync();
-
-        if (sender == null)
-            return RedirectToAction("Login", "Account");
+        if (sender == null) return RedirectToAction("Login", "Account");
 
         if (!IsWalletActive(sender))
         {
-            ModelState.AddModelError(
-                "",
-                "Ví của bạn đang bị khóa."
-            );
-
+            ModelState.AddModelError("", "Ví của bạn đang bị khóa.");
             return View(model);
         }
 
-        var receiver = await _context.Users
-            .FirstOrDefaultAsync(u =>
-                u.Phone == model.ReceiverPhone);
-
+        var receiver = await _context.Users.FirstOrDefaultAsync(u => u.Phone == model.ReceiverPhone);
         if (receiver == null)
         {
-            ModelState.AddModelError(
-                nameof(model.ReceiverPhone),
-                "Không tìm thấy người nhận."
-            );
-
+            ModelState.AddModelError(nameof(model.ReceiverPhone), "Không tìm thấy người nhận.");
             return View(model);
         }
-
         if (!IsWalletActive(receiver))
         {
-            ModelState.AddModelError(
-                "",
-                "Ví người nhận đang bị khóa."
-            );
-
+            ModelState.AddModelError("", "Ví người nhận đang bị khóa.");
             return View(model);
         }
-
         if (sender.UserId == receiver.UserId)
         {
-            ModelState.AddModelError(
-                "",
-                "Không thể chuyển tiền cho chính mình."
-            );
-
+            ModelState.AddModelError("", "Không thể chuyển tiền cho chính mình.");
             return View(model);
         }
-
         if (sender.PinCode != model.PinCode)
         {
-            ModelState.AddModelError(
-                nameof(model.PinCode),
-                "Sai mã PIN."
-            );
-
+            ModelState.AddModelError(nameof(model.PinCode), "Sai mã PIN.");
             return View(model);
         }
 
-        var validation =
-            await ValidateTransactionLimitAsync(
-                sender,
-                model.Amount);
-
+        var validation = await ValidateTransactionLimitAsync(sender, model.Amount);
         if (!validation.IsValid)
         {
-            ModelState.AddModelError(
-                "",
-                validation.Message
-            );
-
+            ModelState.AddModelError("", validation.Message);
             return View(model);
         }
-
         if (sender.Balance < model.Amount)
         {
-            ModelState.AddModelError(
-                "",
-                "Số dư không đủ để thực hiện giao dịch."
-            );
-
+            ModelState.AddModelError("", "Số dư không đủ để thực hiện giao dịch.");
             return View(model);
         }
 
-        using var dbTransaction =
-            await _context.Database.BeginTransactionAsync();
+        // US022: không thực hiện ngay — lưu tạm, bắt buộc xác nhận OTP trước khi trừ tiền
+        var otp = new Random().Next(100000, 999999).ToString();
+        HttpContext.Session.SetString("TransferOtp", otp);
+        HttpContext.Session.SetInt32("TransferSenderId", sender.UserId);
+        HttpContext.Session.SetInt32("TransferReceiverId", receiver.UserId);
+        HttpContext.Session.SetString("TransferAmount", model.Amount.ToString());
+        HttpContext.Session.SetString("TransferDescription", model.Description ?? "");
+        HttpContext.Session.SetString("TransferOtpExpiry", DateTime.Now.AddMinutes(5).ToString("O"));
 
+        TempData["DemoOtp"] = otp; // demo vì chưa có SMS/Email gateway thật (giống US003)
+        return RedirectToAction("ConfirmTransferOtp");
+    }
+
+    public IActionResult ConfirmTransferOtp()
+    {
+        if (HttpContext.Session.GetInt32("TransferSenderId") == null)
+            return RedirectToAction("Transfer");
+        return View();
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ConfirmTransferOtp(string otp)
+    {
+        var senderId = HttpContext.Session.GetInt32("TransferSenderId");
+        var receiverId = HttpContext.Session.GetInt32("TransferReceiverId");
+        var sessionOtp = HttpContext.Session.GetString("TransferOtp");
+        var expiryRaw = HttpContext.Session.GetString("TransferOtpExpiry");
+        var amountRaw = HttpContext.Session.GetString("TransferAmount");
+        var description = HttpContext.Session.GetString("TransferDescription") ?? "";
+
+        if (senderId == null || receiverId == null || amountRaw == null)
+            return RedirectToAction("Transfer");
+
+        bool otpValid = sessionOtp != null && sessionOtp == otp &&
+            expiryRaw != null && DateTime.Parse(expiryRaw) >= DateTime.Now;
+
+        if (!otpValid)
+        {
+            ModelState.AddModelError("", "Mã OTP không đúng hoặc đã hết hạn.");
+            return View();
+        }
+
+        var sender = await _context.Users.FindAsync(senderId.Value);
+        var receiver = await _context.Users.FindAsync(receiverId.Value);
+        var amount = decimal.Parse(amountRaw);
+
+        if (sender == null || receiver == null || sender.Balance < amount)
+        {
+            ModelState.AddModelError("", "Giao dịch không còn hợp lệ, vui lòng thực hiện lại.");
+            return RedirectToAction("Transfer");
+        }
+
+        using var dbTransaction = await _context.Database.BeginTransactionAsync();
         try
         {
-            sender.Balance -= model.Amount;
-            receiver.Balance += model.Amount;
+            sender.Balance -= amount;
+            receiver.Balance += amount;
 
             _context.Transactions.Add(new Transaction
             {
                 TransactionCode = GenerateTransactionCode(),
                 SenderId = sender.UserId,
                 ReceiverId = receiver.UserId,
-                Amount = model.Amount,
+                Amount = amount,
                 Type = "Transfer",
-                Description = string.IsNullOrWhiteSpace(model.Description)
+                Description = string.IsNullOrWhiteSpace(description)
                     ? $"Chuyển tiền cho {receiver.FullName}"
-                    : model.Description,
+                    : description,
                 Status = "Success",
                 CreatedAt = DateTime.Now
             });
 
             await _context.SaveChangesAsync();
-
             await dbTransaction.CommitAsync();
         }
         catch
         {
             await dbTransaction.RollbackAsync();
-
-            ModelState.AddModelError(
-                "",
-                "Giao dịch thất bại. Vui lòng thử lại."
-            );
-
-            return View(model);
+            ModelState.AddModelError("", "Giao dịch thất bại. Vui lòng thử lại.");
+            return View();
         }
 
-        TempData["Success"] =
-            $"Đã chuyển {model.Amount:N0}đ cho {receiver.FullName}.";
+        HttpContext.Session.Remove("TransferOtp");
+        HttpContext.Session.Remove("TransferSenderId");
+        HttpContext.Session.Remove("TransferReceiverId");
+        HttpContext.Session.Remove("TransferAmount");
+        HttpContext.Session.Remove("TransferDescription");
+        HttpContext.Session.Remove("TransferOtpExpiry");
 
+        TempData["Success"] = $"Đã chuyển {amount:N0}đ cho {receiver.FullName}.";
         return RedirectToAction("Index");
     }
 
@@ -1027,6 +1108,97 @@ public class WalletController : Controller
 
         return RedirectToAction("History");
     }
+    // ---------------- US015: Tra cứu trạng thái giao dịch ----------------
+    public async Task<IActionResult> TransactionStatus(string code)
+    {
+        var redirect = CheckLogin();
+        if (redirect != null) return redirect;
 
+        if (string.IsNullOrWhiteSpace(code)) return View();
+
+        var transaction = await _context.Transactions
+            .Include(t => t.Sender)
+            .Include(t => t.Receiver)
+            .FirstOrDefaultAsync(t => t.TransactionCode == code &&
+                (t.SenderId == CurrentUserId || t.ReceiverId == CurrentUserId));
+
+        if (transaction == null) ViewBag.NotFound = true;
+        return View(transaction);
+    }
+
+    // ---------------- US023: Hủy giao dịch rút tiền đang chờ xử lý ----------------
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> CancelWithdraw(int id)
+    {
+        var redirect = CheckLogin();
+        if (redirect != null) return redirect;
+
+        var transaction = await _context.Transactions.FirstOrDefaultAsync(t =>
+            t.TransactionId == id && t.SenderId == CurrentUserId && t.Type == "Withdraw");
+
+        if (transaction == null || transaction.Status != "Pending")
+        {
+            TempData["Success"] = "Không thể hủy giao dịch này.";
+            return RedirectToAction("History");
+        }
+
+        var user = await _context.Users.FindAsync(CurrentUserId);
+        if (user == null) return RedirectToAction("Login", "Account");
+
+        using var dbTransaction = await _context.Database.BeginTransactionAsync();
+        try
+        {
+            user.Balance += transaction.Amount + transaction.FeeAmount; // hoàn lại cả phí đã giữ
+            transaction.Status = "Cancelled";
+            await _context.SaveChangesAsync();
+            await dbTransaction.CommitAsync();
+        }
+        catch
+        {
+            await dbTransaction.RollbackAsync();
+            TempData["Success"] = "Có lỗi xảy ra, vui lòng thử lại.";
+            return RedirectToAction("History");
+        }
+
+        TempData["Success"] = $"Đã hủy giao dịch rút tiền {transaction.Amount:N0}đ và hoàn tiền vào ví.";
+        return RedirectToAction("History");
+    }
 #endif
+    // ---------------- US021: Thanh toán bằng QR Code ----------------
+    public async Task<IActionResult> MyQr()
+    {
+        var redirect = CheckLogin();
+        if (redirect != null) return redirect;
+        var user = await GetCurrentUserAsync();
+        if (user == null) return RedirectToAction("Login", "Account");
+        return View(user);
+    }
+
+    public async Task<IActionResult> MyQrImage()
+    {
+        var redirect = CheckLogin();
+        if (redirect != null) return redirect;
+        var user = await GetCurrentUserAsync();
+        if (user == null) return RedirectToAction("Login", "Account");
+
+        using var qrGenerator = new QRCoder.QRCodeGenerator();
+        using var qrData = qrGenerator.CreateQrCode(user.Phone, QRCoder.QRCodeGenerator.ECCLevel.Q);
+        var qrCode = new QRCoder.PngByteQRCode(qrData);
+        var bytes = qrCode.GetGraphic(10);
+        return File(bytes, "image/png");
+    }
+
+    public IActionResult PayByQr() => View();
+
+    [HttpPost]
+    public IActionResult PayByQr(string qrContent)
+    {
+        if (string.IsNullOrWhiteSpace(qrContent))
+        {
+            ModelState.AddModelError("", "Vui lòng nhập/dán nội dung mã QR.");
+            return View();
+        }
+        return RedirectToAction("Transfer", new { receiverPhone = qrContent });
+    }
 }

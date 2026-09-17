@@ -16,179 +16,117 @@
         Tra cứu hóa đơn trước khi thực hiện thanh toán.
     </p>
 
-    <div asp-validation-summary="All"
-         class="text-danger mb-3">
-    </div>
+    <div asp-validation-summary="All" class="text-danger mb-3"></div>
 
     @if (Model == null || Model.BillId == null)
     {
         <!-- BƯỚC 1: TRA CỨU -->
-
-        <form asp-action="LookupBill"
-              method="post">
-
+        <form asp-action="LookupBill" method="post">
             @Html.AntiForgeryToken()
 
-            <label>
-                <i class="fa-solid fa-list"></i>
-                Loại hóa đơn
-            </label>
+            <label><i class="fa-solid fa-list"></i> Loại hóa đơn</label>
 
-            <select asp-for="BillType" required>
+            <div class="bill-type-grid">
+                <label class="bill-type-option">
+                    <input type="radio" asp-for="BillType" value="Điện" />
+                    <div class="bill-type-card type-dien">
+                        <i class="fa-solid fa-bolt"></i>
+                        <span>Tiền điện</span>
+                    </div>
+                </label>
+                <label class="bill-type-option">
+                    <input type="radio" asp-for="BillType" value="Nước" />
+                    <div class="bill-type-card type-nuoc">
+                        <i class="fa-solid fa-droplet"></i>
+                        <span>Tiền nước</span>
+                    </div>
+                </label>
+                <label class="bill-type-option">
+                    <input type="radio" asp-for="BillType" value="Internet" />
+                    <div class="bill-type-card type-internet">
+                        <i class="fa-solid fa-wifi"></i>
+                        <span>Internet</span>
+                    </div>
+                </label>
+                <label class="bill-type-option">
+                    <input type="radio" asp-for="BillType" value="Điện thoại" />
+                    <div class="bill-type-card type-dienthoai">
+                        <i class="fa-solid fa-mobile-screen"></i>
+                        <span>Điện thoại</span>
+                    </div>
+                </label>
+            </div>
+            <span asp-validation-for="BillType" class="text-danger"></span>
 
-                <option value="">
-                    -- Chọn loại hóa đơn --
-                </option>
+            <label><i class="fa-solid fa-barcode"></i> Mã khách hàng</label>
+            <input asp-for="CustomerCode" placeholder="Ví dụ: EVN123456" autocomplete="off" required />
+            <span asp-validation-for="CustomerCode" class="text-danger"></span>
 
-                <option value="Điện">
-                    💡 Tiền điện
-                </option>
-
-                <option value="Nước">
-                    💧 Tiền nước
-                </option>
-
-                <option value="Internet">
-                    🌐 Internet
-                </option>
-
-                <option value="Điện thoại">
-                    📱 Điện thoại
-                </option>
-
-            </select>
-
-            <span asp-validation-for="BillType"
-                  class="text-danger">
-            </span>
-
-            <label>
-                <i class="fa-solid fa-barcode"></i>
-                Mã khách hàng
-            </label>
-
-            <input asp-for="CustomerCode"
-                   placeholder="Ví dụ: EVN123456"
-                   autocomplete="off"
-                   required />
-
-            <span asp-validation-for="CustomerCode"
-                  class="text-danger">
-            </span>
-
-            <button class="btn-full"
-                    type="submit">
-
-                <i class="fa-solid fa-magnifying-glass"></i>
-
-                Tra cứu hóa đơn
-
+            <button class="btn-full" type="submit">
+                <i class="fa-solid fa-magnifying-glass"></i> Tra cứu hóa đơn
             </button>
-
         </form>
     }
     else
     {
-        <!-- BƯỚC 2: XÁC NHẬN -->
+       
+            var billIconClass = Model.BillType switch
+            {
+                "Điện" => "fa-bolt",
+                "Nước" => "fa-droplet",
+                "Internet" => "fa-wifi",
+                "Điện thoại" => "fa-mobile-screen",
+                _ => "fa-file-invoice-dollar"
+            };
 
         <div class="bill-result">
-
             <div class="bill-header">
-
                 <div>
                     <span>Loại hóa đơn</span>
-
-                    <strong>
-                        @Model.BillType
-                    </strong>
+                    <strong>@Model.BillType</strong>
                 </div>
-
-                <i class="fa-solid fa-file-invoice-dollar"></i>
-
+                <div class="bill-result-icon">
+                    <i class="fa-solid @billIconClass"></i>
+                </div>
             </div>
 
             <div class="bill-info">
-
                 <div class="bill-row">
                     <span>Mã khách hàng</span>
-
-                    <strong>
-                        @Model.CustomerCode
-                    </strong>
+                    <strong>@Model.CustomerCode</strong>
                 </div>
-
                 <div class="bill-row">
                     <span>Khách hàng</span>
-
-                    <strong>
-                        @Model.CustomerName
-                    </strong>
+                    <strong>@Model.CustomerName</strong>
                 </div>
-
                 <div class="bill-row">
                     <span>Kỳ thanh toán</span>
-
-                    <strong>
-                        @Model.BillingPeriod
-                    </strong>
+                    <strong>@Model.BillingPeriod</strong>
                 </div>
-
+                <hr class="bill-divider" />
                 <div class="bill-row total">
-
                     <span>Số tiền cần thanh toán</span>
-
-                    <strong>
-                        @Model.Amount.ToString("N0") đ
-                    </strong>
-
+                    <strong>@Model.Amount.ToString("N0") đ</strong>
                 </div>
-
             </div>
-
         </div>
 
-        <form asp-action="ConfirmPayBill"
-              method="post">
-
+        <form asp-action="ConfirmPayBill" method="post">
             @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="BillId" />
 
-            <input type="hidden"
-                   asp-for="BillId" />
+            <label><i class="fa-solid fa-lock"></i> Mã PIN</label>
+            <input asp-for="PinCode" type="password" maxlength="6" placeholder="Nhập mã PIN" required />
+            <span asp-validation-for="PinCode" class="text-danger"></span>
 
-            <label>
-                <i class="fa-solid fa-lock"></i>
-                Mã PIN
-            </label>
-
-            <input asp-for="PinCode"
-                   type="password"
-                   maxlength="6"
-                   placeholder="Nhập mã PIN"
-                   required />
-
-            <span asp-validation-for="PinCode"
-                  class="text-danger">
-            </span>
-
-            <button class="btn-full"
-                    type="submit">
-
+            <button class="btn-full" type="submit">
                 <i class="fa-solid fa-circle-check"></i>
-
-                Xác nhận thanh toán
-                @Model.Amount.ToString("N0") đ
-
+                Xác nhận thanh toán @Model.Amount.ToString("N0") đ
             </button>
-
         </form>
 
-        <a asp-action="PayBill"
-           class="btn btn-light mt-3">
-
-            <i class="fa-solid fa-arrow-left"></i>
-
-            Tra cứu hóa đơn khác
-
+        <a asp-action="PayBill" class="btn btn-light mt-3">
+            <i class="fa-solid fa-arrow-left"></i> Tra cứu hóa đơn khác
         </a>
     }
 

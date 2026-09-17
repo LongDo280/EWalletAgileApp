@@ -1,0 +1,24 @@
+﻿@{
+    ViewData["Title"] = "Xác thực OTP chuyển tiền";
+}
+<div class="card auth-card">
+    <div class="form-icon"><i class="fa-solid fa-shield-halved"></i></div>
+    <h1>Xác nhận giao dịch</h1>
+    <p class="form-description">Nhập mã OTP để hoàn tất chuyển tiền.</p>
+
+    @if (TempData["DemoOtp"] != null)
+    {
+        <div style="background:#fff7ed; color:#92400e; border:1px solid #fed7aa; font-size:13px;
+            padding:10px 14px; border-radius:8px; text-align:center; margin-bottom:18px;">
+            Demo: mã OTP của bạn là <strong>@TempData["DemoOtp"]</strong>
+        </div>
+    }
+
+    <form asp-action="ConfirmTransferOtp" method="post">
+        @Html.AntiForgeryToken()
+        <div asp-validation-summary="All" class="text-danger"></div>
+        <label><i class="fa-solid fa-key"></i> Mã OTP</label>
+        <input name="otp" placeholder="Nhập mã OTP 6 số" />
+        <button class="btn-full" type="submit"><i class="fa-solid fa-check"></i> Xác nhận</button>
+    </form>
+</div>

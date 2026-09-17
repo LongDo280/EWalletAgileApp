@@ -17,10 +17,21 @@
 
     <link rel="stylesheet" href="~/css/site.css" />
 </head>
+@{
+    var role = Context.Session.GetString("Role");
+    var isStaffOrAdmin = role == "Admin" || role == "Staff";
+    var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
+    var currentAction = ViewContext.RouteData.Values["action"]?.ToString();
 
+    bool IsActive(string controller, string action) =>
+        string.Equals(currentController, controller, StringComparison.OrdinalIgnoreCase) &&
+        string.Equals(currentAction, action, StringComparison.OrdinalIgnoreCase);
+}
 <body>
-    <header class="topbar">
-        <div class="topbar-inner">
+    <input type="checkbox" id="sidebar-toggle" class="sidebar-toggle-state" />
+
+    <div class="app-shell">
+        <aside class="sidebar">
             <a class="brand" asp-controller="Wallet" asp-action="Index">
                 <span class="brand-icon">
                     <i class="fa-solid fa-wallet"></i>
@@ -32,64 +43,84 @@
                 </span>
             </a>
 
-            <nav class="main-nav">
-                <a asp-controller="Wallet" asp-action="Index">
-                    <i class="fa-solid fa-house"></i>
-                    Ví của tôi
-                </a>
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <p class="nav-section-label">Ví của tôi</p>
 
-                <a asp-controller="Wallet" asp-action="History">
-                    <i class="fa-solid fa-clock-rotate-left"></i>
-                    Lịch sử
-                </a>
+                    <a asp-controller="Wallet" asp-action="Index" class="@(IsActive("Wallet", "Index") ? "active" : "")">
+                        <i class="fa-solid fa-house"></i>
+                        Trang chủ
+                    </a>
 
-                <a asp-controller="Wallet" asp-action="BankAccounts">
-                    <i class="fa-solid fa-building-columns"></i>
-                    Ngân hàng liên kết
-                </a>
+                    <a asp-controller="Wallet" asp-action="History" class="@(IsActive("Wallet", "History") ? "active" : "")">
+                        <i class="fa-solid fa-clock-rotate-left"></i>
+                        Lịch sử
+                    </a>
 
-                <a asp-controller="Account" asp-action="Profile">
-                    <i class="fa-solid fa-user"></i>
-                    Hồ sơ
-                </a>
+                    <a asp-controller="Wallet" asp-action="BankAccounts" class="@(IsActive("Wallet", "BankAccounts") ? "active" : "")">
+                        <i class="fa-solid fa-building-columns"></i>
+                        Ngân hàng liên kết
+                    </a>
 
-                @if (Context.Session.GetString("Role") == "Admin" || Context.Session.GetString("Role") == "Staff") 
+                    <a asp-controller="Account" asp-action="Profile" class="@(IsActive("Account", "Profile") ? "active" : "")">
+                        <i class="fa-solid fa-user"></i>
+                        Hồ sơ
+                    </a>
+                </div>
+
+                @if (isStaffOrAdmin)
                 {
-                    <a asp-controller="Admin" asp-action="Index">
-                        <i class="fa-solid fa-user-shield"></i>
-                        Admin
-                    </a>
-                    <a asp-controller="Reconciliation"
-                       asp-action="Index"
-                       class="nav-link">
-                        Đối soát giao dịch
-                    </a>
-                }
+                    <div class="nav-section nav-section-admin">
+                        <p class="nav-section-label">Quản trị</p>
 
-                <a class="logout-link"
-                   asp-controller="Account"
-                   asp-action="Logout">
+                        <a asp-controller="Admin" asp-action="Index" class="@(IsActive("Admin", "Index") ? "active" : "")">
+                            <i class="fa-solid fa-user-shield"></i>
+                            Trang quản trị
+                        </a>
+
+                        <a asp-controller="Reconciliation" asp-action="Index" class="@(IsActive("Reconciliation", "Index") ? "active" : "")">
+                            <i class="fa-solid fa-scale-balanced"></i>
+                            Đối soát giao dịch
+                        </a>
+                    </div>
+                }
+            </nav>
+
+            <div class="sidebar-footer">
+                <a class="logout-link" asp-controller="Account" asp-action="Logout">
                     <i class="fa-solid fa-right-from-bracket"></i>
                     Đăng xuất
                 </a>
-            </nav>
-        </div>
-    </header>
-
-    <main class="container">
-        @if (TempData["Success"] != null)
-        {
-            <div class="alert success">
-                <i class="fa-solid fa-circle-check"></i>
-                <span>@TempData["Success"]</span>
             </div>
-        }
+        </aside>
 
-        @RenderBody()
-    </main>
+        <label for="sidebar-toggle" class="sidebar-backdrop"></label>
 
-    <footer class="footer">
-        <p>© 2026 E-Wallet Agile. Hệ thống quản lý ví điện tử.</p>
-    </footer>
+        <div class="content-area">
+            <header class="topbar">
+                <label for="sidebar-toggle" class="sidebar-burger">
+                    <i class="fa-solid fa-bars"></i>
+                </label>
+
+                <span class="topbar-title">@ViewData["Title"]</span>
+            </header>
+
+            <main class="container">
+                @if (TempData["Success"] != null)
+                {
+                    <div class="alert success">
+                        <i class="fa-solid fa-circle-check"></i>
+                        <span>@TempData["Success"]</span>
+                    </div>
+                }
+
+                @RenderBody()
+            </main>
+
+            <footer class="footer">
+                <p>© 2026 E-Wallet Agile. Hệ thống quản lý ví điện tử.</p>
+            </footer>
+        </div>
+    </div>
 </body>
 </html>

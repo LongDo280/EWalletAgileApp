@@ -1,37 +1,52 @@
 @model User
-@if (Model.Status == "Active")
-{
-    <span class="badge badge-success">
-        <i class="fa-solid fa-circle-check"></i>
-        Ví đang hoạt động
-    </span>
-}
-else
-{
-    <span class="badge badge-danger">
-        <i class="fa-solid fa-lock"></i>
-        Ví đang bị khóa
-    </span>
-}
 @{
     ViewData["Title"] = "Trang chủ ví";
     var transactions = ViewBag.Transactions as List<Transaction>;
+    var monthlyExpense = (decimal)ViewBag.MonthlyExpense;
+    var monthlyTxCount = (int)ViewBag.MonthlyTransactionCount;
+    var linkedBankCount = (int)ViewBag.LinkedBankCount;
 }
 
 <section class="wallet-header">
+    <div class="wallet-header-glow"></div>
+
     <div class="wallet-user">
-        <span class="wallet-label">
-            <i class="fa-solid fa-shield-halved"></i>
-            Ví đã được xác thực
-        </span>
+        <div class="wallet-badges">
+            <span class="wallet-label">
+                <i class="fa-solid fa-shield-halved"></i>
+                Ví đã được xác thực
+            </span>
+
+            @if (Model.Status == "Active")
+            {
+                <span class="badge badge-success">
+                    <i class="fa-solid fa-circle-check"></i>
+                    Ví đang hoạt động
+                </span>
+            }
+            else
+            {
+                <span class="badge badge-danger">
+                    <i class="fa-solid fa-lock"></i>
+                    Ví đang bị khóa
+                </span>
+            }
+        </div>
 
         <p>Xin chào,</p>
         <h1>@Model.FullName</h1>
 
-        <span class="wallet-id">
-            <i class="fa-solid fa-phone"></i>
-            @Model.Phone
-        </span>
+        <div class="wallet-meta">
+            <span class="wallet-id">
+                <i class="fa-solid fa-phone"></i>
+                @Model.Phone
+            </span>
+
+            <span class="wallet-id">
+                <i class="fa-solid fa-calendar-check"></i>
+                Thành viên từ @Model.CreatedAt.ToString("MM/yyyy")
+            </span>
+        </div>
     </div>
 
     <div class="balance-box">
@@ -41,8 +56,50 @@ else
             <i class="fa-solid fa-lock"></i>
             Số dư được bảo mật
         </small>
+
+        <a class="btn balance-cta" asp-action="Transfer">
+            <i class="fa-solid fa-paper-plane"></i>
+            Chuyển tiền ngay
+        </a>
     </div>
 </section>
+
+<div class="stats-row">
+    <div class="stat-card stat-accent">
+        <div class="stat-card-top">
+            <span>Chi tiêu tháng này</span>
+            <span class="stat-icon stat-icon-accent">
+                <i class="fa-solid fa-money-bill-transfer"></i>
+            </span>
+        </div>
+        <strong>@monthlyExpense.ToString("N0") đ</strong>
+        <small>Rút tiền, chuyển khoản &amp; hóa đơn</small>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-card-top">
+            <span>Giao dịch tháng này</span>
+            <span class="stat-icon">
+                <i class="fa-solid fa-arrow-right-arrow-left"></i>
+            </span>
+        </div>
+        <strong>@monthlyTxCount</strong>
+        <small>Giao dịch thành công</small>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-card-top">
+            <span>Ngân hàng liên kết</span>
+            <span class="stat-icon">
+                <i class="fa-solid fa-building-columns"></i>
+            </span>
+        </div>
+        <strong>@linkedBankCount</strong>
+        <small>
+            <a asp-action="BankAccounts">Quản lý liên kết →</a>
+        </small>
+    </div>
+</div>
 
 <div class="page-heading">
     <h1>Tiện ích ví</h1>
@@ -59,6 +116,8 @@ else
             <h3>Nạp tiền</h3>
             <p>Nạp tiền vào ví để sử dụng các dịch vụ.</p>
         </div>
+
+        <span class="action-arrow"><i class="fa-solid fa-arrow-right"></i></span>
     </a>
 
     <a class="action-card" asp-action="Withdraw">
@@ -70,6 +129,8 @@ else
             <h3>Rút tiền</h3>
             <p>Rút tiền từ ví về tài khoản của bạn.</p>
         </div>
+
+        <span class="action-arrow"><i class="fa-solid fa-arrow-right"></i></span>
     </a>
 
     <a class="action-card" asp-action="Transfer">
@@ -81,6 +142,8 @@ else
             <h3>Chuyển tiền</h3>
             <p>Chuyển tiền nhanh qua số điện thoại.</p>
         </div>
+
+        <span class="action-arrow"><i class="fa-solid fa-arrow-right"></i></span>
     </a>
 
     <a class="action-card" asp-action="PayBill">
@@ -92,23 +155,47 @@ else
             <h3>Thanh toán hóa đơn</h3>
             <p>Thanh toán điện, nước và Internet.</p>
         </div>
+
+        <span class="action-arrow"><i class="fa-solid fa-arrow-right"></i></span>
+    </a>
+    <a class="action-card" asp-action="TransactionStatus">
+        <div class="action-icon transfer-icon">
+            <i class="fa-solid fa-magnifying-glass-dollar"></i>
+        </div>
+        <h3>Tra cứu giao dịch</h3>
+        <p>Kiểm tra trạng thái nạp/rút tiền</p>
     </a>
 </div>
+
 <div class="card">
     <div class="card-title">
         <div>
             <h2>Chi tiêu hàng tháng</h2>
             <p>Tổng tiền rút/chuyển/thanh toán hóa đơn trong 6 tháng gần nhất.</p>
         </div>
+
+        <span class="chart-legend">
+            <span class="legend-dot legend-dot-muted"></span> Các tháng trước
+            <span class="legend-dot legend-dot-accent"></span> Tháng này
+        </span>
     </div>
 
     <canvas id="spendingChart" height="90"></canvas>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script>
-    (function () {
-        var ctx = document.getElementById('spendingChart').getContext('2d');
+    (function() {
+        var canvasEl = document.getElementById('spendingChart');
+        if (!canvasEl || typeof Chart === 'undefined') {
+            console.error('Không thể tải thư viện Chart.js hoặc không tìm thấy canvas #spendingChart.');
+            return;
+        }
+        var ctx = canvasEl.getContext('2d');
+        var values = @Json.Serialize(ViewBag.SpendingChartValues);
+        var barColors = values.map(function(_, index) {
+            return index === values.length - 1 ? '#f59e0b' : '#0f9d76';
+        });
 
         new Chart(ctx, {
             type: 'bar',
@@ -116,8 +203,8 @@ else
                 labels: @Json.Serialize(ViewBag.SpendingChartLabels),
                 datasets: [{
                     label: 'Chi tiêu (đ)',
-                    data: @Json.Serialize(ViewBag.SpendingChartValues),
-                    backgroundColor: '#0f9d76',
+                    data: values,
+                    backgroundColor: barColors,
                     borderRadius: 6,
                     maxBarThickness: 56
                 }]
@@ -128,7 +215,7 @@ else
                     legend: { display: false },
                     tooltip: {
                         callbacks: {
-                            label: function (context) {
+                            label: function(context) {
                                 return context.parsed.y.toLocaleString('vi-VN') + ' đ';
                             }
                         }
@@ -138,7 +225,7 @@ else
                     y: {
                         beginAtZero: true,
                         ticks: {
-                            callback: function (value) {
+                            callback: function(value) {
                                 return value.toLocaleString('vi-VN') + 'đ';
                             }
                         }
@@ -148,6 +235,7 @@ else
         });
     })();
 </script>
+
 <div class="card">
     <div class="card-title">
         <div>
@@ -182,9 +270,31 @@ else
                             item.Type == "Nạp tiền" ||
                             item.ReceiverId == Model.UserId;
 
+                        var statusBadge = item.Status switch
+                        {
+                            "Success" => "badge-success",
+                            "Pending" => "badge-warning",
+                            "Failed" => "badge-danger",
+                            _ => "badge-info"
+                        };
+
+                        var typeIcon = item.Type switch
+                        {
+                            "Nạp tiền" => "fa-circle-plus",
+                            "Withdraw" => "fa-money-bill-transfer",
+                            "Transfer" => "fa-paper-plane",
+                            "Bill" => "fa-file-invoice-dollar",
+                            _ => "fa-arrow-right-arrow-left"
+                        };
+
                         <tr>
                             <td>
-                                <strong>@item.Type</strong>
+                                <span class="tx-type">
+                                    <span class="tx-type-icon @(isIncome ? "tx-type-icon-in" : "tx-type-icon-out")">
+                                        <i class="fa-solid @typeIcon"></i>
+                                    </span>
+                                    <strong>@item.Type</strong>
+                                </span>
                             </td>
 
                             <td class="@(isIncome ? "amount-positive" : "amount-negative")">
@@ -194,7 +304,7 @@ else
                             <td>@item.Description</td>
 
                             <td>
-                                <span class="badge badge-success">
+                                <span class="badge @statusBadge">
                                     @item.Status
                                 </span>
                             </td>

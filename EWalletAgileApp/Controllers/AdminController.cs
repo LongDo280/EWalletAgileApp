@@ -228,4 +228,32 @@ public class AdminController : Controller
         TempData["Success"] = $"Đã cập nhật biểu phí {fee.TransactionType}.";
         return RedirectToAction("Fees");
     }
+    public async Task<IActionResult> PendingWithdrawals()
+    {
+        var redirect = EnsureAdmin();
+        if (redirect != null) return redirect;
+
+        var pending = await _context.Transactions
+            .Include(t => t.Sender)
+            .Where(t => t.Type == "Withdraw" && t.Status == "Pending")
+            .OrderBy(t => t.CreatedAt)
+            .ToListAsync();
+
+        return View(pending);
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> ApproveWithdrawal(int id)
+    {
+        var redirect = EnsureAdmin();
+        if (redirect != null) return redirect;
+
+        var transaction = await _context.Transactions.FindAsync(id);
+        if (transaction != null && transaction.Status == "Pending")
+        {
+            transaction.Status = "Success";
+            await _context.SaveChangesAsync();
+        }
+        return RedirectToAction("PendingWithdrawals");
+    }
 }

@@ -1,0 +1,66 @@
+﻿@{
+    ViewData["Title"] = "Xác nhận rút tiền";
+    
+    // Lấy thông tin từ Session để hiển thị cho người dùng biết họ đang xác nhận giao dịch gì
+    var amountStr = Context.Session.GetString("WithdrawAmount");
+    var feeStr = Context.Session.GetString("WithdrawFee");
+    
+    decimal amount = !string.IsNullOrEmpty(amountStr) ? decimal.Parse(amountStr) : 0;
+    decimal fee = !string.IsNullOrEmpty(feeStr) ? decimal.Parse(feeStr) : 0;
+    decimal total = amount + fee;
+}
+
+<style>
+    .confirm-details { background-color: #f9fafb; border-radius: 8px; padding: 16px; margin-bottom: 24px; text-align: left; }
+    .confirm-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px; }
+    .confirm-row:last-child { margin-bottom: 0; padding-top: 8px; border-top: 1px dashed #e5e7eb; font-weight: 600; color: #111827; }
+    .pin-input { letter-spacing: 0.5em; text-align: center; font-size: 20px; font-weight: bold; }
+</style>
+
+<div class="card form-card text-center">
+
+    <div class="form-icon mx-auto">
+        <i class="fa-solid fa-shield-halved"></i>
+    </div>
+
+    <h1>Xác nhận giao dịch</h1>
+    <p class="form-description mb-4">Vui lòng nhập mã PIN để hoàn tất rút tiền</p>
+
+    <div class="confirm-details">
+        <div class="confirm-row">
+            <span class="text-gray-500">Số tiền rút:</span>
+            <span class="font-medium">@amount.ToString("N0") đ</span>
+        </div>
+        <div class="confirm-row">
+            <span class="text-gray-500">Phí giao dịch:</span>
+            <span class="font-medium">@(fee > 0 ? fee.ToString("N0") + " đ" : "Miễn phí")</span>
+        </div>
+        <div class="confirm-row">
+            <span>Tổng trừ ví:</span>
+            <span class="text-teal-600">@total.ToString("N0") đ</span>
+        </div>
+    </div>
+
+    <form asp-action="ConfirmWithdraw" method="post">
+        @Html.AntiForgeryToken()
+        <div asp-validation-summary="All" class="text-danger mb-3"></div>
+
+        <div class="mb-4">
+            <input name="pinCode" 
+                   type="password" 
+                   maxlength="6" 
+                   inputmode="numeric"
+                   class="pin-input w-full" 
+                   placeholder="******" 
+                   required autofocus autocomplete="off" />
+        </div>
+
+        <button class="btn-full" type="submit">
+            <i class="fa-solid fa-check"></i> Hoàn tất rút tiền
+        </button>
+        
+        <a asp-action="Withdraw" class="btn btn-light w-full mt-3" style="display: block; text-align: center; text-decoration: none;">
+            Hủy và quay lại
+        </a>
+    </form>
+</div>
